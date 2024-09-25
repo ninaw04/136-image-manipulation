@@ -186,6 +186,12 @@ Matrix componentLabeling(Image img) {
     int eqTable[(img.height*img.width)];
     int label = 0;
     
+    for (int i = 0; i < img.height; i++) {
+        for (int j = 0; j < img.width; j++) {
+            comp.map[i][j] = -1.0;
+        }
+    }
+    
     // initialize away garbage values in my equivalence table
     for (int i = 0; i < (img.height*img.width); i++) {
         eqTable[i] = -1;
@@ -281,7 +287,7 @@ Image componentColoring(Image orig, Matrix comp, int thresh) {
     
     for (int i = 0; i < orig.height; i++) {
         for (int j = 0; j < orig.width; j++) {
-            if((int) comp.map[i][j] != 0) {
+            if((int) comp.map[i][j] != -1) {
                 setPixel(orig, i, j, 245, (int)comp.map[i][j]*0.255, 66, NO_CHANGE);
             }
             
