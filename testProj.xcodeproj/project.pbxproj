@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2A0F51D52C8BB59F00C6FD35 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 2A0F51D42C8BB59F00C6FD35 /* main.c */; };
+		2AF30BE12C9509DD004BFD6F /* netpbm.c in Sources */ = {isa = PBXBuildFile; fileRef = 2AF30BE02C9509DD004BFD6F /* netpbm.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,6 +26,13 @@
 /* Begin PBXFileReference section */
 		2A0F51D12C8BB59F00C6FD35 /* testProj */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testProj; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A0F51D42C8BB59F00C6FD35 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		2A0F51DE2C8BB5EA00C6FD35 /* car.ppm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = car.ppm; path = ../../project1/netpbm/car.ppm; sourceTree = "<group>"; };
+		2A0F51DF2C8BB5EA00C6FD35 /* gmail.ppm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = gmail.ppm; path = ../../project1/netpbm/gmail.ppm; sourceTree = "<group>"; };
+		2A0F51E02C8BE72F00C6FD35 /* text.pgm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = text.pgm; path = ../../project1/netpbm/text.pgm; sourceTree = "<group>"; };
+		2A0F51E12C8BE73000C6FD35 /* sample.ppm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = sample.ppm; path = ../../project1/netpbm/sample.ppm; sourceTree = "<group>"; };
+		2A0F51E22C8BE73000C6FD35 /* text_image.ppm */ = {isa = PBXFileReference; lastKnownFileType = file; name = text_image.ppm; path = ../../project1/netpbm/text_image.ppm; sourceTree = "<group>"; };
+		2AF30BDF2C9509DD004BFD6F /* netpbm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = netpbm.h; sourceTree = "<group>"; };
+		2AF30BE02C9509DD004BFD6F /* netpbm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = netpbm.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,7 +65,14 @@
 		2A0F51D32C8BB59F00C6FD35 /* testProj */ = {
 			isa = PBXGroup;
 			children = (
+				2A0F51E12C8BE73000C6FD35 /* sample.ppm */,
+				2A0F51E22C8BE73000C6FD35 /* text_image.ppm */,
+				2A0F51E02C8BE72F00C6FD35 /* text.pgm */,
+				2A0F51DE2C8BB5EA00C6FD35 /* car.ppm */,
+				2A0F51DF2C8BB5EA00C6FD35 /* gmail.ppm */,
 				2A0F51D42C8BB59F00C6FD35 /* main.c */,
+				2AF30BE02C9509DD004BFD6F /* netpbm.c */,
+				2AF30BDF2C9509DD004BFD6F /* netpbm.h */,
 			);
 			path = testProj;
 			sourceTree = "<group>";
@@ -120,6 +135,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2A0F51D52C8BB59F00C6FD35 /* main.c in Sources */,
+				2AF30BE12C9509DD004BFD6F /* netpbm.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
