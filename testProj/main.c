@@ -26,19 +26,19 @@ int main(int argc, const char * argv[]) {
        //create blackWhiteImage:
     Image inputImage = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/gray.pgm");
     Image cleanImage = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/image_cleaned.pbm");
-    Image test = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/shenanigans.pbm");
+//    Image test = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/shenanigans.pbm");
 
     //-------------------------------------------------------------------------------
         // create colored text image:
     printf("finding components\n");
-//    Matrix components = componentLabeling(cleanImage);
-    Matrix components = componentLabeling(test);
+    Matrix components = componentLabeling(cleanImage);
+//    Matrix components = componentLabeling(test);
     printf("coloring components\n");
-//    Image textColoredImage = componentColoring(cleanImage, components, 200);
-    Image textColoredImage = componentColoring(test, components, 0);
+    Image textColoredImage = componentColoring(cleanImage, components, 200);
+//    Image textColoredImage = componentColoring(test, components, 0);
     printf("done with components\n");
-//    writeImage(textColoredImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/text_colored.ppm");
-    writeImage(textColoredImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/test_colored.ppm");
+    writeImage(textColoredImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/text_colored.ppm");
+//    writeImage(textColoredImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/test_colored.ppm");
     
         //  create blackWhiteImage:
 //    printf("creating black white image\n");
@@ -186,9 +186,10 @@ Matrix componentLabeling(Image img) {
 //    Matrix comp = createMatrixFromArray(arr, img.height, img.width);
     Matrix comp = createMatrix(img.height, img.width); // matrix to look at for labeling
 //    int eqTable[(img.height*img.width)/2 + 1];
-    int eqTable[(img.height*img.width)];
+    int eqTable[(img.height*img.width)/2+1];
     int label = 0;
     
+    // initializing labels to all -1
     for (int i = 0; i < img.height; i++) {
         for (int j = 0; j < img.width; j++) {
             comp.map[i][j] = -1.0;
@@ -196,7 +197,7 @@ Matrix componentLabeling(Image img) {
     }
     
     // initialize away garbage values in my equivalence table
-    for (int i = 0; i < (img.height*img.width); i++) {
+    for (int i = 0; i < (img.height*img.width/2+1); i++) {
         eqTable[i] = -1;
     }
     
@@ -206,62 +207,58 @@ Matrix componentLabeling(Image img) {
         for (int j = 0; j < img.width; j++) {
             // if the pixel is black 0 (white is 255)
             if (img.map[i][j].i == 0) {
+                int topIndex;
+                int leftIndex;
+                
                 if (i == 0 && j == 0) {
                     // if pixel is top left
-                    eqTable[label*2] = label;
-                    eqTable[label*2+1] = label;
-                    
+                    eqTable[label] = label;
                     comp.map[i][j] = label;
                     label++;
                 } else if (j == 0) {
                     // leftmost pixels
                     if (img.map[i-1][j].i == 0) {
                         // if upper pixel is labeled
-                        comp.map[i][j] = comp.map[i-1][j];
+                        comp.map[i][j] = eqTable[(int) comp.map[i-1][j]];
                     } else {
-                        eqTable[label*2] = label;
-                        eqTable[label*2+1] = label;
-                        
+                        eqTable[label] = label;
                         comp.map[i][j] = label;
                         label++;
                     }
                 } else if (i == 0) {
                     // topmost pixels
                     if (img.map[i][j-1].i == 0) {
-//                        comp.map[i][j] = comp.map[i][j-1];
-                        comp.map[i][j] = eqTable[2 * (int)comp.map[i][j-1] + 1];
+                        // if left pixel is labeled
+                        comp.map[i][j] = eqTable[(int) comp.map[i][j-1]];
                     } else {
-                        eqTable[label*2] = label;
-                        eqTable[label*2+1] = label;
-                        
+                        eqTable[label] = label;
                         comp.map[i][j] = label;
                         label++;
                     }
                 } else if (img.map[i-1][j].i == 0 && img.map[i][j-1].i == 0) {
+                    topIndex = (int) comp.map[i-1][j];
+                    leftIndex = (int) comp.map[i][j-1];
                     // if top and left neighbor are black
-                    int topVal = comp.map[i-1][j];
-                    int leftVal = comp.map[i][j-1];
-                    
-                    comp.map[i][j] = eqTable[2 * (int)comp.map[i-1][j] + 1]; // label is top label regardless
-                    
-//                    if (comp.map[i-1][j] != comp.map[i-1][j]) {
-                    if (topVal != leftVal) {
-                        // pairs of indexes in the array are equivalent
-                        eqTable[(int) comp.map[i][j-1]* 2 + 1] = comp.map[i-1][j]; // setting left group to top group
+                    // MAYBE MOVE THIS LINE BELOW IF ELSE IF STATEMENTs
+                    comp.map[i][j] = eqTable[topIndex]; // label in matrix is top label regardless
+                    if (eqTable[leftIndex] > eqTable[topIndex]) {
+                        eqTable[leftIndex] = eqTable[topIndex];
+                    } else if (eqTable[topIndex] > eqTable[leftIndex]) {
+                        eqTable[topIndex] = eqTable[leftIndex];
                     }
                 } else if (img.map[i-1][j].i == 0) {
+                    topIndex = (int) comp.map[i-1][j];
+                    leftIndex = (int) comp.map[i][j-1];
                     // only top has label
-//                    comp.map[i][j] = comp.map[i-1][j];
-                    comp.map[i][j] = eqTable[2 * (int)comp.map[i-1][j] + 1];
+                    comp.map[i][j] = eqTable[topIndex];
                 } else if (img.map[i][j-1].i == 0) {
+                    topIndex = (int) comp.map[i-1][j];
+                    leftIndex = (int) comp.map[i][j-1];
                     // only left has label
-//                    comp.map[i][j] = comp.map[i][j-1];
-                    comp.map[i][j] = eqTable[2 * (int)comp.map[i][j-1] + 1];
+                    comp.map[i][j] = eqTable[leftIndex];
                 } else {
                     // assign new label to the pixel
-                    eqTable[label*2] = label;
-                    eqTable[label*2+1] = label;
-                    
+                    eqTable[label] = label;
                     comp.map[i][j] = label;
                     label++;
                 }
@@ -272,13 +269,12 @@ Matrix componentLabeling(Image img) {
     
     // find lowest label
     int x = 0;
-    while (eqTable[x*2+1] != -1) { // might not be good? but also for this use case, it  won't  fill up
-        if (eqTable[x*2] != eqTable[x*2+1]) {
+    while (eqTable[x] != -1) { // might not be good? but also for this use case, it  won't  fill up
+        if (x != eqTable[x]) {
             // eqTable[x*2+1] returns the "index" of the label that we want to copy
             // because every label takes up 2 spaces, the actual index of the label would be 2 * that
             // lastly, in order to see the true group label, it is a part of, we add 1
-            eqTable[x*2+1] = eqTable[(2*(int)eqTable[x*2+1])+1];
-            
+            eqTable[x] = eqTable[(int)eqTable[x]];
         }
         x++;
     }
@@ -287,7 +283,7 @@ Matrix componentLabeling(Image img) {
     for (int i = 0; i < img.height; i++) {
         for (int j = 0; j < img.width; j++) {
             if (img.map[i][j].i == 0) {
-                comp.map[i][j] = eqTable[((int)comp.map[i][j])*2+1];
+                comp.map[i][j] = eqTable[((int)comp.map[i][j])];
             }
         }
     }
