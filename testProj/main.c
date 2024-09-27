@@ -26,16 +26,19 @@ int main(int argc, const char * argv[]) {
        //create blackWhiteImage:
     Image inputImage = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/gray.pgm");
     Image cleanImage = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/image_cleaned.pbm");
-//    Image test = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/shenanigans.pbm");
+    Image test = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/shenanigans.pbm");
 
     //-------------------------------------------------------------------------------
         // create colored text image:
     printf("finding components\n");
-    Matrix components = componentLabeling(cleanImage);
+//    Matrix components = componentLabeling(cleanImage);
+    Matrix components = componentLabeling(test);
     printf("coloring components\n");
-    Image textColoredImage = componentColoring(cleanImage, components, 200);
+//    Image textColoredImage = componentColoring(cleanImage, components, 200);
+    Image textColoredImage = componentColoring(test, components, 0);
     printf("done with components\n");
-    writeImage(textColoredImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/text_colored.ppm");
+//    writeImage(textColoredImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/text_colored.ppm");
+    writeImage(textColoredImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/test_colored.ppm");
     
         //  create blackWhiteImage:
 //    printf("creating black white image\n");
@@ -225,7 +228,8 @@ Matrix componentLabeling(Image img) {
                 } else if (i == 0) {
                     // topmost pixels
                     if (img.map[i][j-1].i == 0) {
-                        comp.map[i][j] = comp.map[i][j-1];
+//                        comp.map[i][j] = comp.map[i][j-1];
+                        comp.map[i][j] = eqTable[2 * (int)comp.map[i][j-1] + 1];
                     } else {
                         eqTable[label*2] = label;
                         eqTable[label*2+1] = label;
@@ -235,18 +239,24 @@ Matrix componentLabeling(Image img) {
                     }
                 } else if (img.map[i-1][j].i == 0 && img.map[i][j-1].i == 0) {
                     // if top and left neighbor are black
-                    comp.map[i][j] = comp.map[i-1][j]; // label is top label regardless
+                    int topVal = comp.map[i-1][j];
+                    int leftVal = comp.map[i][j-1];
                     
-                    if (comp.map[i-1][j] != comp.map[i-1][j]) {
+                    comp.map[i][j] = eqTable[2 * (int)comp.map[i-1][j] + 1]; // label is top label regardless
+                    
+//                    if (comp.map[i-1][j] != comp.map[i-1][j]) {
+                    if (topVal != leftVal) {
                         // pairs of indexes in the array are equivalent
-                        eqTable[(int) comp.map[i][j-1]*2+1] = comp.map[i-1][j]; // setting left group to top group
+                        eqTable[(int) comp.map[i][j-1]* 2 + 1] = comp.map[i-1][j]; // setting left group to top group
                     }
                 } else if (img.map[i-1][j].i == 0) {
                     // only top has label
-                    comp.map[i][j] = comp.map[i-1][j];
+//                    comp.map[i][j] = comp.map[i-1][j];
+                    comp.map[i][j] = eqTable[2 * (int)comp.map[i-1][j] + 1];
                 } else if (img.map[i][j-1].i == 0) {
                     // only left has label
-                    comp.map[i][j] = comp.map[i][j-1];
+//                    comp.map[i][j] = comp.map[i][j-1];
+                    comp.map[i][j] = eqTable[2 * (int)comp.map[i][j-1] + 1];
                 } else {
                     // assign new label to the pixel
                     eqTable[label*2] = label;
@@ -262,11 +272,13 @@ Matrix componentLabeling(Image img) {
     
     // find lowest label
     int x = 0;
-    // x*2+1 WAS x PREVIOUSLY
     while (eqTable[x*2+1] != -1) { // might not be good? but also for this use case, it  won't  fill up
         if (eqTable[x*2] != eqTable[x*2+1]) {
-//            eqTable[x*2+1] = eqTable[(int)eqTable[x*2]+1];
-            eqTable[x*2+1] = eqTable[(int)eqTable[x*2+1]];
+            // eqTable[x*2+1] returns the "index" of the label that we want to copy
+            // because every label takes up 2 spaces, the actual index of the label would be 2 * that
+            // lastly, in order to see the true group label, it is a part of, we add 1
+            eqTable[x*2+1] = eqTable[(2*(int)eqTable[x*2+1])+1];
+            
         }
         x++;
     }
@@ -284,24 +296,43 @@ Matrix componentLabeling(Image img) {
 }
 
 Image componentColoring(Image orig, Matrix comp, int thresh) {
+    // count the amount of pixels per label for threshold
+    int numPixels[orig.height*orig.width/2+1];
+    memset(numPixels, 0, sizeof(numPixels));
+    for (int i = 0; i < orig.height; i++) {
+        for (int j = 0; j < orig.width; j++) {
+            numPixels[(int) comp.map[i][j]]++;
+        }
+    }
+    
+    // set random colors for each label
+    int pixColor[(orig.height * orig.width / 2 + 1) * 3];
+    for (int i = 0; i < (orig.height*orig.width/2+1); i++) {
+        pixColor[i*3] = rand() % 256;   // r
+        pixColor[i*3+1] = rand() % 256; // g
+        pixColor[i*3+2] = rand() % 256; // b
+    }
     
     for (int i = 0; i < orig.height; i++) {
         for (int j = 0; j < orig.width; j++) {
+            int label = (int) comp.map[i][j];
             if((int) comp.map[i][j] != -1) {
-                setPixel(orig, i, j, 245, (int)comp.map[i][j]*0.255, 66, NO_CHANGE);
+                if (numPixels[label] >= thresh) {
+                    setPixel(orig, i, j, pixColor[label*3], pixColor[label*3+1], pixColor[label*3+2], NO_CHANGE);
+                }
             }
             
 //            switch ((int) comp.map[i][j]) {
-//                case 1:
+//                case 0:
 //                    setPixel(orig, i, j, 245, 30, 66, NO_CHANGE);
 //                    break;
-//                case 65:
+//                case 20:
 //                    setPixel(orig, i, j, 245, 66, 66, NO_CHANGE);
 //                    break;
-//                case 66:
+//                case 10:
 //                    setPixel(orig, i, j, 245, 130, 66, NO_CHANGE);
 //                    break;
-//                case 67:
+//                case 5:
 //                    setPixel(orig, i, j, 245, 200, 66, NO_CHANGE);
 //                    break;
 //            }
