@@ -180,12 +180,7 @@ Image imageNoise(Image orig, float p) {
 
 // only for binary images
 Matrix componentLabeling(Image img) {
-    // TRY CREATEMATRIXFROMARRAY TO FILL WITH -1
-//    double arr[img.width*img.height];
-//    memset(arr, -1.0, sizeof(double));
-//    Matrix comp = createMatrixFromArray(arr, img.height, img.width);
     Matrix comp = createMatrix(img.height, img.width); // matrix to look at for labeling
-//    int eqTable[(img.height*img.width)/2 + 1];
     int eqTable[(img.height*img.width)/2+1];
     int label = 0;
     
@@ -239,7 +234,6 @@ Matrix componentLabeling(Image img) {
                     topIndex = (int) comp.map[i-1][j];
                     leftIndex = (int) comp.map[i][j-1];
                     // if top and left neighbor are black
-                    // MAYBE MOVE THIS LINE BELOW IF ELSE IF STATEMENTs
                     comp.map[i][j] = eqTable[topIndex]; // label in matrix is top label regardless
                     if (eqTable[leftIndex] > eqTable[topIndex]) {
                         eqTable[leftIndex] = eqTable[topIndex];
@@ -271,9 +265,6 @@ Matrix componentLabeling(Image img) {
     int x = 0;
     while (eqTable[x] != -1) { // might not be good? but also for this use case, it  won't  fill up
         if (x != eqTable[x]) {
-            // eqTable[x*2+1] returns the "index" of the label that we want to copy
-            // because every label takes up 2 spaces, the actual index of the label would be 2 * that
-            // lastly, in order to see the true group label, it is a part of, we add 1
             eqTable[x] = eqTable[(int)eqTable[x]];
         }
         x++;
@@ -309,6 +300,16 @@ Image componentColoring(Image orig, Matrix comp, int thresh) {
         pixColor[i*3+2] = rand() % 256; // b
     }
     
+    int x = 0;
+    int totalComponents = 0;
+    while (x < (orig.height*orig.width/2+1)) {
+        if (numPixels[x] >= thresh){
+            totalComponents++;
+        }
+        x++;
+    }
+    printf("Total letters: %d\n", totalComponents);
+    
     for (int i = 0; i < orig.height; i++) {
         for (int j = 0; j < orig.width; j++) {
             int label = (int) comp.map[i][j];
@@ -317,59 +318,7 @@ Image componentColoring(Image orig, Matrix comp, int thresh) {
                     setPixel(orig, i, j, pixColor[label*3], pixColor[label*3+1], pixColor[label*3+2], NO_CHANGE);
                 }
             }
-            
-//            switch ((int) comp.map[i][j]) {
-//                case 0:
-//                    setPixel(orig, i, j, 245, 30, 66, NO_CHANGE);
-//                    break;
-//                case 20:
-//                    setPixel(orig, i, j, 245, 66, 66, NO_CHANGE);
-//                    break;
-//                case 10:
-//                    setPixel(orig, i, j, 245, 130, 66, NO_CHANGE);
-//                    break;
-//                case 5:
-//                    setPixel(orig, i, j, 245, 200, 66, NO_CHANGE);
-//                    break;
-//            }
         }
     }
     return orig;
-    
-    
-//    int components[orig.height*orig.width/2+1];
-//    
-//    for (int i = 0; i < (orig.height*orig.width/2+1); i++) {
-//        components[i] = -1;
-//    }
-//    
-//    for (int i = 0; i < orig.height; i++) {
-//        for (int j = 0; j < orig.width; j++) {
-//            // count the amount of pixels per component for the threshold
-////            components[(int)comp.map[i][j]*2+1] = components[(int)comp.map[i][j]];
-//            components[(int)comp.map[i][j]] += 1;
-//            // comp.map[i][j] is the label, which is being used as the index
-//        }
-//    }
-//    
-//    int r = 245;
-//    int g = 66;
-//    int b = 66;
-//    for (int i = 0; i < orig.height; i++) {
-//        for (int j = 0; j < orig.width; j++) {
-//            if((int)comp.map[i][j] == 68) {
-//                setPixel(orig, i, j, r, g, b, NO_CHANGE);
-//            }
-////            if (orig.map[i][j].i == 0) {
-////                if (components[(int)comp.map[i][j]] >= 50) {
-////                    setPixel(orig, i, j, r, g, b, NO_CHANGE);
-////                }
-////                if((int)comp.map[i][j] == 70) {
-////                    setPixel(orig, i, j, r, g, b, NO_CHANGE);
-////                }
-//                
-////            }
-//        }
-//    }
-//    return orig;
 }
