@@ -3,7 +3,7 @@
 //  CS136
 //
 //  Created by nha2 on 8/27/24.
-//  Edited by Nina Wang on 9/25/24
+//  Edited by Nina Wang on 9/29/24
 // Test and demo program for netpbm. Reads a sample image and creates several output images.
 
 #include <stdio.h>
@@ -20,71 +20,41 @@ Image imageShrink(Image originalImg);
 Image imageNoise(Image originalImg, float percentage);
 Matrix componentLabeling(Image cleanImage);
 Image componentColoring(Image originalImg, Matrix components, int threshold);
+Matrix smoothing_filter(Matrix image, Matrix filter);
 
 int main(int argc, const char * argv[]) {
-    //-------------------------------------------------------------------------------
-       //create blackWhiteImage:
-    Image inputImage = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/gray.pgm");
-    Image cleanImage = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/image_cleaned.pbm");
-//    Image test = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/shenanigans.pbm");
+    // creating images
+//    Image inputImage = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/gray.pgm");
+//    Image cleanImage = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/image_cleaned.pbm");
+    Image car = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car.ppm");
+    Image sample = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/sample.ppm");
 
-    //-------------------------------------------------------------------------------
-        // create colored text image:
-    printf("finding components\n");
-    Matrix components = componentLabeling(cleanImage);
-//    Matrix components = componentLabeling(test);
-    printf("coloring components\n");
-    Image textColoredImage = componentColoring(cleanImage, components, 200);
-//    Image textColoredImage = componentColoring(test, components, 0);
-    printf("done with components\n");
-    writeImage(textColoredImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/text_colored.ppm");
-//    writeImage(textColoredImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/test_colored.ppm");
+    // testing smoothing and median filter
+    printf("smoothing\n");
+    Matrix sampleMatrix = image2Matrix(sample);
+    Matrix filter3x3 = createMatrix(3, 3);
+    sampleMatrix = smoothing_filter(sampleMatrix, filter3x3);
+    Image smoothed = matrix2Image(sampleMatrix, 0, 0);
+    writeImage(smoothed, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/sample_smoothed.ppm");
+    printf("finished smoothing filter\n");
     
-        //  create blackWhiteImage:
-//    printf("creating black white image\n");
-//    Image blackWhite = imageBlackWhite(inputImage, 180);
-//    writeImage(blackWhite, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/black-white.pbm");
-//    
-//       // create noiseImage:
-//    Image noiseImage = imageNoise(cleanImage, 0.6);
-//    writeImage(noiseImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/noise.pbm");
-//
-//    // Sequence of expand shrink shrink expand image
-//    printf("0. expand image\n\tbc white is 8 neighbor\n");
-//    Image imageCleaned = imageExpand(blackWhite);
-//    writeImage(imageCleaned, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/image_cleaned.pbm");
-////    
-//    printf("1. shrink image\n\tremoves most black noise\n");
-//    imageCleaned = imageShrink(imageCleaned);
-//    writeImage(imageCleaned, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/image_cleaned.pbm");
-////    
-//    printf("2. shrink image\n\teliminates rest of black noise\n");
-//    imageCleaned = imageShrink(imageCleaned);
-//    writeImage(imageCleaned, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/image_cleaned.pbm");
-//
-//    printf("4. expand image\n\tthicken lines\n");
-//    imageCleaned = imageExpand(imageCleaned);
-//    writeImage(imageCleaned, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/image_cleaned.pbm");
+    // Create colored text image:
+//    printf("finding components\n");
+//    Matrix components = componentLabeling(cleanImage);
+//    printf("coloring components\n");
+//    Image textColoredImage = componentColoring(cleanImage, components, 200);
+//    printf("done with components\n");
+//    writeImage(textColoredImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/text_colored.ppm");
 
-       //-------------------------------------------------------------------------------
-       // Uncomment this after you finish your homework
-       // Function that does threshold, noise and numbers of spanding and shrinking
-       // COMMENT THIS FUNCTION IF YOU DON'T WANT IT TO RUN EVEY TIME
-//        function_readImage();
+    // Cleaning up images and matrices
+//    deleteImage(inputImage);
+//    deleteMatrix(components);
+//    deleteImage(cleanImage);
+    deleteImage(sample);
+    deleteImage(car);
 
-        /* Delete back and white, noise, Expand and Shrink */
-    deleteImage(inputImage);
-    deleteMatrix(components);
-//    deleteImage(textColoredImage);
-    deleteImage(cleanImage);
-
-
-
-
-       printf("Program ends ... ");
-
-
-       return 0;
+    printf("Program ends ... ");
+    return 0;
 }
 
 
@@ -270,7 +240,7 @@ Matrix componentLabeling(Image img) {
         x++;
     }
     
-//     second pass through picture
+    // second pass through picture
     for (int i = 0; i < img.height; i++) {
         for (int j = 0; j < img.width; j++) {
             if (img.map[i][j].i == 0) {
@@ -278,7 +248,6 @@ Matrix componentLabeling(Image img) {
             }
         }
     }
-    
     return comp;
 }
 
@@ -321,4 +290,23 @@ Image componentColoring(Image orig, Matrix comp, int thresh) {
         }
     }
     return orig;
+}
+
+// Takes in an image matrix of zeroes and a filter matrix, smoothing based on the average of the size of filter
+Matrix smoothing_filter(Matrix m1, Matrix m2) {
+    int fHeight = m2.height;
+    int fWidth = m2.width;
+    
+    for (int i = floor(fHeight/2); i < (m1.height - ceil(fHeight/2)); i++) {
+        for (int j = floor(fWidth/2); j < (m1.width - ceil(fWidth/2)); j++) {
+            double average = 0;
+            for (int h = 0; h < fHeight; h++) {
+                for (int w = 0; w < fWidth; w++) {
+                    average += m1.map[i+h][j+w]/(fHeight*fWidth);
+                }
+            }
+            m1.map[i][j] = average;
+        }
+    }
+    return m1;
 }
