@@ -21,6 +21,7 @@ Image imageNoise(Image originalImg, float percentage);
 Matrix componentLabeling(Image cleanImage);
 Image componentColoring(Image originalImg, Matrix components, int threshold);
 Matrix smoothing_filter(Matrix image, Matrix filter);
+Matrix median_filter(Matrix image, Matrix filter);
 
 int main(int argc, const char * argv[]) {
     // creating images
@@ -29,14 +30,24 @@ int main(int argc, const char * argv[]) {
     Image car = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car.ppm");
     Image sample = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/sample.ppm");
 
-    // testing smoothing and median filter
+    // testing smoothing and filter
     printf("smoothing\n");
     Matrix sampleMatrix = image2Matrix(sample);
-    Matrix filter3x3 = createMatrix(3, 3);
-    sampleMatrix = smoothing_filter(sampleMatrix, filter3x3);
+    Matrix filter = createMatrix(5, 5);
+    sampleMatrix = smoothing_filter(sampleMatrix, filter);
     Image smoothed = matrix2Image(sampleMatrix, 0, 0);
     writeImage(smoothed, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/sample_smoothed.ppm");
     printf("finished smoothing filter\n");
+    
+    // testing median filter
+    Image noisySample = imageNoise(sample, 0.02);
+    writeImage(noisySample, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/noisy_sample.pbm");
+    Matrix noisyMatrix = image2Matrix(noisySample);
+    printf("median of sample\n");
+    Matrix medianMatrix = median_filter(noisyMatrix, filter);
+    Image medianImage = matrix2Image(medianMatrix, 0, 0);
+    writeImage(medianImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/sample_median.ppm");
+    printf("finished median filter\n");
     
     // Create colored text image:
 //    printf("finding components\n");
@@ -297,16 +308,48 @@ Matrix smoothing_filter(Matrix m1, Matrix m2) {
     int fHeight = m2.height;
     int fWidth = m2.width;
     
-    for (int i = floor(fHeight/2); i < (m1.height - ceil(fHeight/2)); i++) {
-        for (int j = floor(fWidth/2); j < (m1.width - ceil(fWidth/2)); j++) {
+    for (int i = 0; i < (m1.height - fHeight); i++) {
+        for (int j = 0; j < (m1.width - fWidth); j++) {
             double average = 0;
             for (int h = 0; h < fHeight; h++) {
                 for (int w = 0; w < fWidth; w++) {
                     average += m1.map[i+h][j+w]/(fHeight*fWidth);
                 }
             }
-            m1.map[i][j] = average;
+            m1.map[i+(int)floor(fHeight/2)][j+(int)floor(fWidth/2)] = average;
         }
     }
     return m1;
+}
+
+int compare(const void* a, const void* b) {
+    double *x = (double *) a;
+    double *y = (double *) b;
+    // return *x - *y; // this is WRONG...
+    if (*x < *y) return -1;
+    else if (*x > *y) return 1; return 0;
+}
+
+Matrix median_filter(Matrix m1, Matrix m2) {
+    Matrix mat = m1;
+    int fHeight = m2.height;
+    int fWidth = m2.width;
+    int halfHeight = (int)floor(fHeight/2);
+    int halfWidth = (int)floor(fWidth/2);
+    
+    for (int i = halfHeight; i < (m1.height - halfHeight); i++) {
+        for (int j = halfWidth; j < (m1.width - halfWidth); j++) {
+            double weights[fHeight * fWidth]; // probably rounds up??
+            int k = 0;
+            for (int h = 0; h < fHeight; h++) {
+                for (int w = 0; w < fWidth; w++) {
+                    weights[k++] = m1.map[i+h - halfHeight][j+w - halfWidth];
+                }
+            }
+            qsort(weights, fHeight * fWidth, sizeof(double), compare);
+            double median = weights[(fWidth*fHeight)/2];
+            mat.map[i][j] = median;
+        }
+    }
+    return mat;
 }
