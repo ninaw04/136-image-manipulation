@@ -22,33 +22,36 @@ Matrix componentLabeling(Image cleanImage);
 Image componentColoring(Image originalImg, Matrix components, int threshold);
 Matrix smoothing_filter(Matrix image, Matrix filter);
 Matrix median_filter(Matrix image, Matrix filter);
+Image sobel(Image image);
+Image canny(Image image);
+
+
+Matrix gaussian(Matrix img, int size, double sigma);
 
 int main(int argc, const char * argv[]) {
     // creating images
-    Image sample = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/sample.pgm");
-    
+    Image car_bw = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_bw.pgm");
+    Image car = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car.ppm");
 
-    // testing smoothing and filter
-    printf("smoothing\n");
-    Matrix sampleMatrix = image2Matrix(sample);
-    Matrix smoothFilter = createMatrix(10, 10);
-    sampleMatrix = smoothing_filter(sampleMatrix, smoothFilter);
-    Image smoothed = matrix2Image(sampleMatrix, 0, 0);
-    writeImage(smoothed, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/sample_smoothed.ppm");
-    printf("finished smoothing filter\n");
+    // testing sobel filter
+    printf("starting sobel filter\n");
+    Image sobelImg = sobel(car_bw);
+    writeImage(sobelImg, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_sobel.pgm");
+    printf("finished sobel filter\n");
     
-    // testing median filter
-    printf("adding noise to sample\n");
-    Image noisySample = imageNoise(sample, 0.02);
-    Matrix noisyMatrix = image2Matrix(noisySample);
-    printf("finding median of sample with noise\n");
-    Matrix medianFilter = createMatrix(5, 5);
-    Matrix medianMatrix = median_filter(noisyMatrix, medianFilter);
-    Image medianImage = matrix2Image(medianMatrix, 0, 0);
-    writeImage(medianImage, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/sample_median.ppm");
-    printf("finished median filter\n");
+    // testing canny filter
+    printf("test gaussian\n");
+//    Matrix carG = image2Matrix(car_bw);
+//    carG = gaussian(carG, 5, 5.0);
+//    Image carGImg = matrix2Image(carG, 0, 0);
+//    writeImage(carGImg, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_g_horiz.pgm");
+    printf("starting canny filter\n");
+    Image car_nonmax = canny(car_bw);
+    writeImage(car_nonmax, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_nonmax.pgm");
+    
  
-    deleteImage(sample);
+    deleteImage(car_bw);
+    deleteImage(car);
 
     printf("Program ends ... ");
     return 0;
@@ -326,7 +329,7 @@ Matrix median_filter(Matrix m1, Matrix m2) {
     
     for (int i = halfHeight; i < (m1.height - halfHeight); i++) {
         for (int j = halfWidth; j < (m1.width - halfWidth); j++) {
-            double weights[fHeight * fWidth]; // probably rounds up??
+            double weights[fHeight * fWidth];
             int k = 0;
             for (int h = 0; h < fHeight; h++) {
                 for (int w = 0; w < fWidth; w++) {
@@ -345,18 +348,188 @@ Matrix median_filter(Matrix m1, Matrix m2) {
 // Filter m2
 // convolve rotates m2 180 degrees, multiplies 8 neighbors, and sums it in m1[i][j]
 Matrix convolve(Matrix m1, Matrix m2) {
-    Matrix mat = m1;
+    Matrix mat = createMatrix(m1.height, m1.width);
     int halfHeight = m2.height/2;
     int halfWidth = m2.width/2;
     
     for (int i = halfHeight; i < (m1.height - halfHeight); i++) {
         for (int j = halfWidth; j < (m1.width - halfWidth); j++) {
-            for (int x = -halfHeight; x < halfHeight; x++) {
-                for (int y = -halfWidth; y < halfWidth; y++) {
-                    mat.map[i][j] = m1.map[i-x][j-y];
+            double sum = 0;
+            for (int x = 0; x < m2.height; x++) {
+                for (int y = 0; y < m2.width; y++) {
+                     sum += m2.map[x][y] * m1.map[i-halfHeight+x][j-halfHeight+y];
                 }
             }
+            mat.map[i][j] = sum;
         }
     }
     return mat;
+}
+
+Matrix gaussian(Matrix img, int filterSize, double sigma) {
+    double sum = 0.0;
+    int halfSize = filterSize / 2;
+    double filter[filterSize];
+        
+    // Calculate each value of the filter
+    for (int i = 0; i < filterSize; i++) {
+        int x = i - halfSize; // Centering the filter at 0
+        filter[i] = (1 / (sqrt(2 * PI) * sigma)) * exp(-(x * x) / (2 * sigma * sigma));
+        sum += filter[i]; // Keep track of the sum for normalization
+    }
+
+    // Normalize the filter so that the sum of all elements is 1
+    for (int i = 0; i < filterSize; i++) {
+        filter[i] /= sum;
+    }
+    
+    // convolve matrix with filter horizontally and vertically
+    Matrix filterX = createMatrixFromArray(filter, 1, filterSize);
+    Matrix filterY = createMatrixFromArray(filter, filterSize, 1);
+
+    // pass img through both -- separated for testing
+    img = convolve(img, filterX);
+    img = convolve(img, filterY);
+    
+    deleteMatrix(filterX);
+    deleteMatrix(filterY);
+    
+    return img;
+}
+
+// applies sobel filter using convolve
+Image sobel(Image img) {
+    double si[] = {1, 2, 1, 0, 0, 0, -1, -2, -1}; // horizontal
+    double sj[] = {1, 0, -1, 2, 0, -2, 1, 0, -1}; // vertical
+    
+    Matrix msi = createMatrixFromArray(si, 3, 3);
+    Matrix msj = createMatrixFromArray(sj, 3, 3);
+    
+    Matrix imgMat = image2Matrix(img);
+    // smoothing filter prior to convolutions
+    Matrix smoothFilter = createMatrix(3, 3);
+    imgMat = smoothing_filter(imgMat, smoothFilter);
+//    imgMat = gaussian(imgMat, 5, 3.0);
+    // finding horizontal and vertical edges
+    Matrix mati = convolve(imgMat, msi);
+    Matrix matj = convolve(imgMat, msj);
+    
+    Matrix gMag = createMatrix(imgMat.height, imgMat.width);
+    Matrix gAngle = createMatrix(imgMat.height, imgMat.width);
+
+    int threshold = 180;
+    for (int i = 0; i < imgMat.height; i++) {
+        for (int j = 0; j < imgMat.width; j++) {
+            // Magnitude matrix
+            gMag.map[i][j] = sqrt(mati.map[i][j]*mati.map[i][j] + matj.map[i][j]*matj.map[i][j]);
+            // Angle matrix
+            gAngle.map[i][j] = atan2(matj.map[i][j], mati.map[i][j]);
+            if (gMag.map[i][j] < threshold) {
+                gMag.map[i][j] = 0;
+            }
+        }
+    }
+    
+    img = matrix2Image(gMag, 0, 0);
+    
+    deleteMatrix(msi);
+    deleteMatrix(msj);
+    deleteMatrix(imgMat);
+    deleteMatrix(smoothFilter);
+    deleteMatrix(mati);
+    deleteMatrix(matj);
+    deleteMatrix(gMag);
+    deleteMatrix(gAngle);
+    
+    return img;
+}
+
+double maxDouble(double n1, double n2, double n3) {
+    if (n1 > n2 && n1 > n3) {
+        return n1;
+    } else if (n2 > n1 && n2 > n3) {
+        return n2;
+    } else if (n3 > n1 && n3 > n2) {
+        return n3;
+    } else {
+        return n1;
+    }
+}
+
+// applies canny filter using convolve
+// smooth image: apply gaussian with standard deviation
+// compute gradient with smoothed array
+Image canny(Image img) {
+    // do I initialize a new image here? how does memory allocation work here
+    Matrix imgMat = image2Matrix(img);
+    imgMat = gaussian(imgMat, 5, 2.0);
+    // create vertical derivative
+    double vDer[] = {0.5, 0.5, -0.5, -0.5};
+    double hDer[] = {0.5, -0.5, 0.5, -0.5};
+    Matrix vDerFilter = createMatrixFromArray(vDer, 2, 2);
+    Matrix hDerFilter = createMatrixFromArray(hDer, 2, 2);
+    printf("gradx\n");
+    Matrix gradX = convolve(imgMat, hDerFilter);
+    printf("grady\n");
+    Matrix gradY = convolve(imgMat, vDerFilter);
+    
+    Matrix mag = createMatrix(img.height, img.width);
+    Matrix orient = createMatrix(img.height, img.width);
+    for (int i = 0; i < img.height; i++) {
+        for (int j = 0; j < img.width; j++) {
+            mag.map[i][j] = sqrt(pow(gradX.map[i][j],2) + pow(gradY.map[i][j],2));  // magnitude
+            
+            // orientation
+            double deg = atan2(gradY.map[i][j], gradX.map[i][j]);
+            if (deg > 22.5 && deg <= 67.5) {
+                orient.map[i][j] = 1;  // 45 deg
+            } else if (deg > 67.5 && deg <= 112.5) {
+                orient.map[i][j] = 2;  // 90 deg
+            } else if (deg > 112.5 && deg <= 157.5) {
+                orient.map[i][j] = 3; // 135 deg
+            } else {
+                orient.map[i][j] = 0;   // 0 deg
+            }
+        }
+    }
+    // non maxima suppression
+    Matrix nonMaxima = createMatrix(img.height, img.width);
+    // hysteresis thresholding
+    // 2low <= high <= 3low
+    double threshLow = 60;
+    double threshHigh = 150;
+    
+    for (int i = 1; i < img.height-1; i++) {
+        for (int j = 1; j < img.width-1; j++) {
+            double e = 0;
+            switch ((int)orient.map[i][j]) {
+                case 0:
+                    e = maxDouble(mag.map[i-1][j], mag.map[i][j], mag.map[i+1][j]);
+                    if (e > threshHigh) {
+                        nonMaxima.map[i][j] = e;
+                    } else if (e < threshLow) {
+                        nonMaxima.map[i][j] = 0;
+                    }
+                    
+                    break;
+                case 1:
+                    e = maxDouble(mag.map[i-1][j-1], mag.map[i][j], mag.map[i+1][j+1]);
+                    nonMaxima.map[i][j] = e;
+                    break;
+                case 2:
+                    e = maxDouble(mag.map[i][j-1], mag.map[i][j], mag.map[i][j+1]);
+                    nonMaxima.map[i][j] = e;
+                    break;
+                case 3:
+                    e = maxDouble(mag.map[i-1][j+1], mag.map[i][j], mag.map[i+1][j-1]);
+                    nonMaxima.map[i][j] = e;
+                    break;
+            }
+        }
+    }
+    
+    
+    
+    
+    return matrix2Image(nonMaxima, 0, 0);
 }
