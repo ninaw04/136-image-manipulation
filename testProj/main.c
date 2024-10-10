@@ -12,21 +12,7 @@
 #include <math.h>
 #include "netpbm.h"
 #include <stdio.h>
-
-
-Image imageBlackWhite(Image originalImg, double threshold);
-Image imageExpand(Image originalImg);
-Image imageShrink(Image originalImg);
-Image imageNoise(Image originalImg, float percentage);
-Matrix componentLabeling(Image cleanImage);
-Image componentColoring(Image originalImg, Matrix components, int threshold);
-Matrix smoothing_filter(Matrix image, Matrix filter);
-Matrix median_filter(Matrix image, Matrix filter);
-Image sobel(Image image);
-Image canny(Image image);
-
-
-Matrix gaussian(Matrix img, int size, double sigma);
+#include "main.h"
 
 int main(int argc, const char * argv[]) {
     // creating images
@@ -149,7 +135,8 @@ Image imageNoise(Image orig, float p) {
 }
 
 // only for binary images
-Matrix componentLabeling(Image img) {
+// 4 neighbor component labeling
+Matrix componentLabeling(Matrix img, int eightNeighbor) {
     Matrix comp = createMatrix(img.height, img.width); // matrix to look at for labeling
     int eqTable[(img.height*img.width)/2+1];
     int label = 0;
@@ -171,9 +158,8 @@ Matrix componentLabeling(Image img) {
         // rows
         for (int j = 0; j < img.width; j++) {
             // if the pixel is black 0 (white is 255)
-            if (img.map[i][j].i == 0) {
-                int topIndex;
-                int leftIndex;
+            if (img.map[i][j] == 0) {
+                int topIndex, leftIndex, topLeftIndex, topRightIndex;
                 
                 if (i == 0 && j == 0) {
                     // if pixel is top left
@@ -182,7 +168,7 @@ Matrix componentLabeling(Image img) {
                     label++;
                 } else if (j == 0) {
                     // leftmost pixels
-                    if (img.map[i-1][j].i == 0) {
+                    if (img.map[i-1][j] == 0) {
                         // if upper pixel is labeled
                         comp.map[i][j] = eqTable[(int) comp.map[i-1][j]];
                     } else {
@@ -192,7 +178,7 @@ Matrix componentLabeling(Image img) {
                     }
                 } else if (i == 0) {
                     // topmost pixels
-                    if (img.map[i][j-1].i == 0) {
+                    if (img.map[i][j-1] == 0) {
                         // if left pixel is labeled
                         comp.map[i][j] = eqTable[(int) comp.map[i][j-1]];
                     } else {
@@ -200,40 +186,55 @@ Matrix componentLabeling(Image img) {
                         comp.map[i][j] = label;
                         label++;
                     }
-                } else if (img.map[i-1][j].i == 0 && img.map[i][j-1].i == 0) {
-                    topIndex = (int) comp.map[i-1][j];
-                    leftIndex = (int) comp.map[i][j-1];
-                    // if top and left neighbor are black
-                    comp.map[i][j] = eqTable[topIndex]; // label in matrix is top label regardless
-                    if (eqTable[leftIndex] > eqTable[topIndex]) {
-                        eqTable[leftIndex] = eqTable[topIndex];
-                    } else if (eqTable[topIndex] > eqTable[leftIndex]) {
-                        eqTable[topIndex] = eqTable[leftIndex];
-                    }
-                } else if (img.map[i-1][j].i == 0) {
-                    topIndex = (int) comp.map[i-1][j];
-                    leftIndex = (int) comp.map[i][j-1];
-                    // only top has label
-                    comp.map[i][j] = eqTable[topIndex];
-                } else if (img.map[i][j-1].i == 0) {
-                    topIndex = (int) comp.map[i-1][j];
-                    leftIndex = (int) comp.map[i][j-1];
-                    // only left has label
-                    comp.map[i][j] = eqTable[leftIndex];
                 } else {
-                    // assign new label to the pixel
-                    eqTable[label] = label;
-                    comp.map[i][j] = label;
-                    label++;
+                    if (img.map[i-1][j] == 0 && img.map[i][j-1] == 0) {
+                        topIndex = (int) comp.map[i-1][j];
+                        leftIndex = (int) comp.map[i][j-1];
+                        comp.map[i][j] = eqTable[topIndex]; // label in matrix is top label regardless
+                        if (eqTable[leftIndex] > eqTable[topIndex]) {
+                            eqTable[leftIndex] = eqTable[topIndex];
+                        } else if (eqTable[topIndex] > eqTable[leftIndex]) {
+                            eqTable[topIndex] = eqTable[leftIndex];
+                        }
+                    } else if (img.map[i-1][j] == 0) {
+                        topIndex = (int) comp.map[i-1][j];
+                        comp.map[i][j] = eqTable[topIndex];
+                    } else if (img.map[i][j-1] == 0) {
+                        leftIndex = (int) comp.map[i][j-1];
+                        comp.map[i][j] = eqTable[leftIndex];
+                    } else {
+                        eqTable[label] = label;
+                        comp.map[i][j] = label;
+                        label++;
+                    }
+
+                    // 8-neighbor connectivity
+                    if (eightNeighbor) {
+                        if (i > 0 && j > 0 && img.map[i - 1][j - 1] == 0) {
+                            topLeftIndex = (int)comp.map[i - 1][j - 1];
+                            if (eqTable[topLeftIndex] < eqTable[(int)comp.map[i][j]]) {
+                                eqTable[(int)comp.map[i][j]] = eqTable[topLeftIndex];
+                            } else {
+                                eqTable[topLeftIndex] = eqTable[(int)comp.map[i][j]];
+                            }
+                        }
+                        if (i > 0 && j < img.width - 1 && img.map[i - 1][j + 1] == 0) {
+                            topRightIndex = (int)comp.map[i - 1][j + 1];
+                            if (eqTable[topRightIndex] < eqTable[(int)comp.map[i][j]]) {
+                                eqTable[(int)comp.map[i][j]] = eqTable[topRightIndex];
+                            } else {
+                                eqTable[topRightIndex] = eqTable[(int)comp.map[i][j]];
+                            }
+                        }
+                    }
                 }
             }
-            
         }
     }
     
     // find lowest label
     int x = 0;
-    while (eqTable[x] != -1) { // might not be good? but also for this use case, it  won't  fill up
+    while (eqTable[x] != -1) {
         if (x != eqTable[x]) {
             eqTable[x] = eqTable[(int)eqTable[x]];
         }
@@ -243,11 +244,12 @@ Matrix componentLabeling(Image img) {
     // second pass through picture
     for (int i = 0; i < img.height; i++) {
         for (int j = 0; j < img.width; j++) {
-            if (img.map[i][j].i == 0) {
+            if (img.map[i][j] == 0) {
                 comp.map[i][j] = eqTable[((int)comp.map[i][j])];
             }
         }
     }
+    
     return comp;
 }
 
@@ -409,7 +411,7 @@ Image sobel(Image img) {
     // smoothing filter prior to convolutions
     Matrix smoothFilter = createMatrix(3, 3);
     imgMat = smoothing_filter(imgMat, smoothFilter);
-//    imgMat = gaussian(imgMat, 5, 3.0);
+
     // finding horizontal and vertical edges
     Matrix mati = convolve(imgMat, msi);
     Matrix matj = convolve(imgMat, msj);
@@ -460,19 +462,21 @@ double maxDouble(double n1, double n2, double n3) {
 // smooth image: apply gaussian with standard deviation
 // compute gradient with smoothed array
 Image canny(Image img) {
-    // do I initialize a new image here? how does memory allocation work here
     Matrix imgMat = image2Matrix(img);
     imgMat = gaussian(imgMat, 5, 2.0);
-    // create vertical derivative
-    double vDer[] = {0.5, 0.5, -0.5, -0.5};
-    double hDer[] = {0.5, -0.5, 0.5, -0.5};
-    Matrix vDerFilter = createMatrixFromArray(vDer, 2, 2);
-    Matrix hDerFilter = createMatrixFromArray(hDer, 2, 2);
-    printf("gradx\n");
+    // find x and y gradients
+     double vDer[] = {0.5, 0.5, -0.5, -0.5};
+     double hDer[] = {0.5, -0.5, 0.5, -0.5};
+     Matrix vDerFilter = createMatrixFromArray(vDer, 2, 2);
+     Matrix hDerFilter = createMatrixFromArray(hDer, 2, 2);
+//    double vDer[] = {-1, -2, -1, 0, 0, 0, 1, 2, 1};
+//    double hDer[] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
+//    Matrix vDerFilter = createMatrixFromArray(vDer, 3, 3);
+//    Matrix hDerFilter = createMatrixFromArray(hDer, 3, 3);
     Matrix gradX = convolve(imgMat, hDerFilter);
-    printf("grady\n");
     Matrix gradY = convolve(imgMat, vDerFilter);
     
+    // find magnitude and orientation
     Matrix mag = createMatrix(img.height, img.width);
     Matrix orient = createMatrix(img.height, img.width);
     for (int i = 0; i < img.height; i++) {
@@ -480,56 +484,115 @@ Image canny(Image img) {
             mag.map[i][j] = sqrt(pow(gradX.map[i][j],2) + pow(gradY.map[i][j],2));  // magnitude
             
             // orientation
-            double deg = atan2(gradY.map[i][j], gradX.map[i][j]);
-            if (deg > 22.5 && deg <= 67.5) {
-                orient.map[i][j] = 1;  // 45 deg
-            } else if (deg > 67.5 && deg <= 112.5) {
-                orient.map[i][j] = 2;  // 90 deg
-            } else if (deg > 112.5 && deg <= 157.5) {
-                orient.map[i][j] = 3; // 135 deg
+            // double deg = atan2(gradY.map[i][j], gradX.map[i][j]);
+            double deg = atan2(gradY.map[i][j], gradX.map[i][j]) * (180.0 / M_PI); // convert radians to degrees
+            if (deg < 0) {
+                deg += 360; // normalize to [0, 360)
+            }
+            if ((deg > 22.5 && deg <= 67.5) || (deg > 202.5 && deg < 247.5)) {
+                orient.map[i][j] = 0;  // 45 and 225 deg   1
+            } else if ((deg > 67.5 && deg <= 112.5) || (deg >= 247.5 && deg < 292.5)) {
+                orient.map[i][j] = 45;  // 90 and 270 deg  2
+            } else if ((deg > 112.5 && deg <= 157.5) || (deg >= 292.5 && deg < 337.5)) {
+                orient.map[i][j] = 90; // 135 and 315 deg  3
             } else {
-                orient.map[i][j] = 0;   // 0 deg
+                orient.map[i][j] = 135;   // 0 and 180 deg  0
             }
         }
     }
-    // non maxima suppression
+    
     Matrix nonMaxima = createMatrix(img.height, img.width);
-    // hysteresis thresholding
-    // 2low <= high <= 3low
-    double threshLow = 60;
-    double threshHigh = 150;
+    Matrix hyst = createMatrix(img.height, img.width);
+    Matrix hystCandidates = createMatrix(img.height, img.width);
+    double threshLow = 20;
+    double threshHigh = 60;
     
     for (int i = 1; i < img.height-1; i++) {
         for (int j = 1; j < img.width-1; j++) {
-            double e = 0;
+            double e = mag.map[i][j];
+            // non maximum suppression
             switch ((int)orient.map[i][j]) {
                 case 0:
-                    e = maxDouble(mag.map[i-1][j], mag.map[i][j], mag.map[i+1][j]);
-                    if (e > threshHigh) {
+                    if (e >= mag.map[i][j-1] && mag.map[i][j+1]) {
                         nonMaxima.map[i][j] = e;
-                    } else if (e < threshLow) {
+                    } else {
                         nonMaxima.map[i][j] = 0;
                     }
-                    
                     break;
-                case 1:
-                    e = maxDouble(mag.map[i-1][j-1], mag.map[i][j], mag.map[i+1][j+1]);
-                    nonMaxima.map[i][j] = e;
+                case 45:
+                    if (e >= mag.map[i-1][j+1] && e >= mag.map[i+1][j-1]) {
+                        nonMaxima.map[i][j] = e;
+                    } else {
+                        nonMaxima.map[i][j] = 0;
+                    }
                     break;
-                case 2:
-                    e = maxDouble(mag.map[i][j-1], mag.map[i][j], mag.map[i][j+1]);
-                    nonMaxima.map[i][j] = e;
+                case 90:
+                    if (e >= mag.map[i-1][j] && e >= mag.map[i+1][j]) {
+                        nonMaxima.map[i][j] = e;
+                    } else {
+                        nonMaxima.map[i][j] = 0;
+                    }                    
                     break;
-                case 3:
-                    e = maxDouble(mag.map[i-1][j+1], mag.map[i][j], mag.map[i+1][j-1]);
-                    nonMaxima.map[i][j] = e;
+                case 135:    
+                    if (e >= mag.map[i-1][j-1] && e >= mag.map[i+1][j+1]) {
+                        nonMaxima.map[i][j] = e;
+                    } else {
+                        nonMaxima.map[i][j] = 0;
+                    }                
                     break;
+            }
+            // hysteresis thresholding
+            if (nonMaxima.map[i][j] > threshHigh) {
+                hyst.map[i][j] = 255; // edge
+                hystCandidates.map[i][j] = 0; // Components are black
+            } else if (nonMaxima.map[i][j] > threshLow) {
+                hyst.map[i][j] = 100; // to mark edge candidate
+                hystCandidates.map[i][j] = 0;
+            } else {
+                hyst.map[i][j] = 0;
+                hystCandidates.map[i][j] = 255;
             }
         }
     }
     
+    for (int i = 0; i < img.height; i++) {
+        hystCandidates.map[i][0] = 255;
+        hystCandidates.map[i][img.width - 1] = 255;
+    }
+    for (int j = 0; j < img.width; j++) {
+        hystCandidates.map[0][j] = 255;
+        hystCandidates.map[img.height - 1][j] = 255;
+    }
     
+    Matrix components = componentLabeling(hystCandidates, 1);
+    printf("found components\n");
     
+    int acceptedComps[img.width * img.height];
+    memset(acceptedComps, 0, sizeof(acceptedComps));
     
-    return matrix2Image(nonMaxima, 0, 0);
+    for (int i = 0; i < img.height; i++) {
+        for (int j = 0; j < img.width; j++) {
+            if ((int)hyst.map[i][j] == 255) {
+                acceptedComps[(int)components.map[i][j]] = 1;
+            }
+        }
+    }
+    
+    for (int i = 0; i < img.height; i++) {
+        for (int j = 0; j < img.width; j++) {
+            if (acceptedComps[(int)components.map[i][j]] == 1) {
+                hyst.map[i][j] = 255; // edge pixels set to white
+            } else {
+                hyst.map[i][j] = 0; // background pixels set to black
+            }
+        }
+    }
+    
+    return matrix2Image(hyst, 0, 0);
+    
+    /*
+     something wrong with component labeling
+     not setting the 255 edges as the actual edges
+     */
+    
 }
