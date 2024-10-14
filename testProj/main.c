@@ -463,9 +463,9 @@ double maxDouble(double n1, double n2, double n3) {
 // compute gradient with smoothed array
 Image canny(Image img) {
     Matrix imgMat = image2Matrix(img);
-//    imgMat = gaussian(imgMat, 3, 5.0);
-    Matrix filt = createMatrix(3, 3);
-    imgMat = median_filter(imgMat, filt);
+    imgMat = gaussian(imgMat, 3, 1.0);
+//    Matrix filt = createMatrix(3, 3);
+//    imgMat = median_filter(imgMat, filt);
     
     // find x and y gradients
     double vDer[] = {0.5, 0.5, -0.5, -0.5};
@@ -477,6 +477,7 @@ Image canny(Image img) {
     
     // find magnitude and orientation
     Matrix mag = createMatrix(img.height, img.width);
+    
     Matrix orient = createMatrix(img.height, img.width);
     Matrix nonMaxima = createMatrix(img.height, img.width);
     for (int i = 0; i < img.height; i++) {
@@ -513,7 +514,7 @@ Image canny(Image img) {
                 orient.map[i][j] = 150;
             }
 
-            // compare with respective neighbors
+            
             if (mag.map[i][j] >= q && mag.map[i][j] >= r) {
                 nonMaxima.map[i][j] = mag.map[i][j];
             } else {
@@ -522,9 +523,29 @@ Image canny(Image img) {
         }
     }
     
+    // scale magnitude to use full range of 0 to 255
+    float min = __FLT_MAX__;
+    float max = __FLT_MIN__;
+    for (int i = 0; i < mag.height; i++) {
+        for (int j = 0; j < mag.width; j++) {
+            if (mag.map[i][j] < min) {
+                min = mag.map[i][j];
+            } else if (mag.map[i][j] > max) {
+                max = mag.map[i][j];
+            }
+        }
+    }
+    
+    for (int i = 0; i < mag.height; i++) {
+        for (int j = 0; j < mag.width; j++) {
+            float val = mag.map[i][j];
+            mag.map[i][j] = (val-min) / (max-min) * 255;
+        }
+    }
+    
     Matrix hyst = createMatrix(img.height, img.width);
     Matrix hystCandidates = createMatrix(img.height, img.width);
-    double threshLow = 50;
+    double threshLow = 25;
     double threshHigh = 40;
     
     // hysteresis thresholding
@@ -565,17 +586,6 @@ Image canny(Image img) {
             }
         }
     }
-    
-//   for (int i = 0; i < img.height; i++) {
-//       for (int j = 0; j < img.width; j++) {
-//           if (acceptedComps[(int)components.map[i][j]] == 1) {
-//               hyst.map[i][j] = 0; // edge pixels set to white
-//           } else {
-//               hyst.map[i][j] = 255; // background pixels set to black
-//           }
-//       }
-//   }
-//   return matrix2Image(hyst, 0, 0);
    
      for (int i = 1; i < img.height-1; i++) {
          for (int j = 1; j < img.width-1; j++) {
@@ -592,5 +602,5 @@ Image canny(Image img) {
          }
      }
     
-    return matrix2Image(orient, 0, 0);
+    return matrix2Image(hyst, 0, 0);
 }
