@@ -463,84 +463,139 @@ double maxDouble(double n1, double n2, double n3) {
 // compute gradient with smoothed array
 Image canny(Image img) {
     Matrix imgMat = image2Matrix(img);
-    imgMat = gaussian(imgMat, 5, 2.0);
+    imgMat = gaussian(imgMat, 3, 1.0);
     // find x and y gradients
-     double vDer[] = {0.5, 0.5, -0.5, -0.5};
-     double hDer[] = {0.5, -0.5, 0.5, -0.5};
-     Matrix vDerFilter = createMatrixFromArray(vDer, 2, 2);
-     Matrix hDerFilter = createMatrixFromArray(hDer, 2, 2);
-//    double vDer[] = {-1, -2, -1, 0, 0, 0, 1, 2, 1};
-//    double hDer[] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
-//    Matrix vDerFilter = createMatrixFromArray(vDer, 3, 3);
-//    Matrix hDerFilter = createMatrixFromArray(hDer, 3, 3);
+      double vDer[] = {0.5, 0.5, -0.5, -0.5};
+      double hDer[] = {0.5, -0.5, 0.5, -0.5};
+      Matrix vDerFilter = createMatrixFromArray(vDer, 2, 2);
+      Matrix hDerFilter = createMatrixFromArray(hDer, 2, 2);
+//   double vDer[] = {-1, -2, -1, 0, 0, 0, 1, 2, 1};
+//   double hDer[] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
+//   Matrix vDerFilter = createMatrixFromArray(vDer, 3, 3);
+//   Matrix hDerFilter = createMatrixFromArray(hDer, 3, 3);
     Matrix gradX = convolve(imgMat, hDerFilter);
     Matrix gradY = convolve(imgMat, vDerFilter);
     
     // find magnitude and orientation
     Matrix mag = createMatrix(img.height, img.width);
     Matrix orient = createMatrix(img.height, img.width);
+    Matrix nonMaxima = createMatrix(img.height, img.width);
     for (int i = 0; i < img.height; i++) {
         for (int j = 0; j < img.width; j++) {
+            
+            
             mag.map[i][j] = sqrt(pow(gradX.map[i][j],2) + pow(gradY.map[i][j],2));  // magnitude
+            
+//            if (mag.map[i][j] < 180) {
+//                mag.map[i][j] = 0;
+//            }
             
             // orientation
             // double deg = atan2(gradY.map[i][j], gradX.map[i][j]);
             double deg = atan2(gradY.map[i][j], gradX.map[i][j]) * (180.0 / M_PI); // convert radians to degrees
             if (deg < 0) {
-                deg += 360; // normalize to [0, 360)
+                deg += 180; // normalize to [0, 360)
             }
-            if ((deg > 22.5 && deg <= 67.5) || (deg > 202.5 && deg < 247.5)) {
-                orient.map[i][j] = 0;  // 45 and 225 deg   1
-            } else if ((deg > 67.5 && deg <= 112.5) || (deg >= 247.5 && deg < 292.5)) {
-                orient.map[i][j] = 45;  // 90 and 270 deg  2
-            } else if ((deg > 112.5 && deg <= 157.5) || (deg >= 292.5 && deg < 337.5)) {
-                orient.map[i][j] = 90; // 135 and 315 deg  3
+            int q = 255;
+            int r = 255;
+            //0 <= angle[i, j] < 22.5) or (157.5 <= angle[i, j] <= 180)
+            if ((deg >= 0 && deg < 22.5) || (deg >= 157.5 && deg <= 180)) {
+                // r = mag.map[i][j - 1];
+                // q = mag.map[i][j + 1];
+                q = mag.map[i][j + 1];
+                r = mag.map[i][j - 1];
+                
+                orient.map[i][j] = 0;
+            }
+            else if ((deg >= 22.5 && deg < 67.5) /*|| (deg > 202.5 && deg < 247.5)*/) {
+//                orient.map[i][j] = 0;  // 45 and 225 deg   1
+                
+                // r = mag.map[i-1][j+1];
+                // q = mag.map[i+1][j-1];
+                q = mag.map[i + 1][j - 1];
+                r = mag.map[i - 1][j + 1];
+                orient.map[i][j] = 50;
+                
+            } else if ((deg >= 67.5 && deg < 112.5) /*|| (deg >= 247.5 && deg < 292.5)*/) {
+//                orient.map[i][j] = 45;  // 90 and 270 deg  2
+                
+                // r = mag.map[i - 1][j];
+                // q = mag.map[i + 1][j];
+                q = mag.map[i + 1][j];
+                r = mag.map[i - 1][j];
+                orient.map[i][j] = 100;
+                
+            } else if ((deg >= 112.5 && deg < 157.5) /*|| (deg >= 292.5 && deg < 337.5)*/) {
+                //                orient.map[i][j] = 90; // 135 and 315 deg  3
+                
+                // r = mag.map[i + 1][j + 1];
+                // q = mag.map[i - 1][j - 1];
+                q = mag.map[i + 1][j + 1];
+                r = mag.map[i - 1][j - 1];
+                orient.map[i][j] = 200;
+            }
+//            } else {
+////                orient.map[i][j] = 135;   // 0 and 180 deg  0
+//                
+//                r = mag.map[i][j - 1];
+//                q = mag.map[i][j + 1];
+//            }
+            
+            if (mag.map[i][j] >= q && mag.map[i][j] >= r) {
+                nonMaxima.map[i][j] = mag.map[i][j];
             } else {
-                orient.map[i][j] = 135;   // 0 and 180 deg  0
+                nonMaxima.map[i][j] = 0;
             }
+
+//            return matrix2Image(nonMaxima, 0, 0);
+            
+//            if (G[i, j] >= q) and (G[i, j] >= r):
+//                            Z[i, j] = G[i, j]
+//                        else:
+//                            Z[i, j] = 0
         }
     }
     
-    Matrix nonMaxima = createMatrix(img.height, img.width);
+//    Matrix nonMaxima = createMatrix(img.height, img.width);
     Matrix hyst = createMatrix(img.height, img.width);
     Matrix hystCandidates = createMatrix(img.height, img.width);
-    double threshLow = 20;
-    double threshHigh = 60;
+    double threshLow = 45;
+    double threshHigh = 70;
     
     for (int i = 1; i < img.height-1; i++) {
         for (int j = 1; j < img.width-1; j++) {
-            double e = mag.map[i][j];
-            // non maximum suppression
-            switch ((int)orient.map[i][j]) {
-                case 0:
-                    if (e >= mag.map[i][j-1] && mag.map[i][j+1]) {
-                        nonMaxima.map[i][j] = e;
-                    } else {
-                        nonMaxima.map[i][j] = 0;
-                    }
-                    break;
-                case 45:
-                    if (e >= mag.map[i-1][j+1] && e >= mag.map[i+1][j-1]) {
-                        nonMaxima.map[i][j] = e;
-                    } else {
-                        nonMaxima.map[i][j] = 0;
-                    }
-                    break;
-                case 90:
-                    if (e >= mag.map[i-1][j] && e >= mag.map[i+1][j]) {
-                        nonMaxima.map[i][j] = e;
-                    } else {
-                        nonMaxima.map[i][j] = 0;
-                    }                    
-                    break;
-                case 135:    
-                    if (e >= mag.map[i-1][j-1] && e >= mag.map[i+1][j+1]) {
-                        nonMaxima.map[i][j] = e;
-                    } else {
-                        nonMaxima.map[i][j] = 0;
-                    }                
-                    break;
-            }
+//            double e = mag.map[i][j];
+//            // non maximum suppression
+//            switch ((int)orient.map[i][j]) {
+//                case 0:
+//                    if (e >= mag.map[i][j-1] && mag.map[i][j+1]) {
+//                        nonMaxima.map[i][j] = e;
+//                    } else {
+//                        nonMaxima.map[i][j] = 0;
+//                    }
+//                    break;
+//                case 45:
+//                    if (e >= mag.map[i-1][j+1] && e >= mag.map[i+1][j-1]) {
+//                        nonMaxima.map[i][j] = e;
+//                    } else {
+//                        nonMaxima.map[i][j] = 0;
+//                    }
+//                    break;
+//                case 90:
+//                    if (e >= mag.map[i-1][j] && e >= mag.map[i+1][j]) {
+//                        nonMaxima.map[i][j] = e;
+//                    } else {
+//                        nonMaxima.map[i][j] = 0;
+//                    }                    
+//                    break;
+//                case 135:    
+//                    if (e >= mag.map[i-1][j-1] && e >= mag.map[i+1][j+1]) {
+//                        nonMaxima.map[i][j] = e;
+//                    } else {
+//                        nonMaxima.map[i][j] = 0;
+//                    }                
+//                    break;
+//            }
             // hysteresis thresholding
             if (nonMaxima.map[i][j] > threshHigh) {
                 hyst.map[i][j] = 255; // edge
@@ -568,7 +623,7 @@ Image canny(Image img) {
     printf("found components\n");
     
     int acceptedComps[img.width * img.height];
-    memset(acceptedComps, 0, sizeof(acceptedComps));
+    memset(acceptedComps, -1, sizeof(acceptedComps));
     
     for (int i = 0; i < img.height; i++) {
         for (int j = 0; j < img.width; j++) {
@@ -578,17 +633,33 @@ Image canny(Image img) {
         }
     }
     
-    for (int i = 0; i < img.height; i++) {
-        for (int j = 0; j < img.width; j++) {
-            if (acceptedComps[(int)components.map[i][j]] == 1) {
-                hyst.map[i][j] = 255; // edge pixels set to white
-            } else {
-                hyst.map[i][j] = 0; // background pixels set to black
-            }
-        }
-    }
-    
-    return matrix2Image(hyst, 0, 0);
+   for (int i = 0; i < img.height; i++) {
+       for (int j = 0; j < img.width; j++) {
+           if (acceptedComps[(int)components.map[i][j]] == 1) {
+               hyst.map[i][j] = 0; // edge pixels set to white
+           } else {
+               hyst.map[i][j] = 255; // background pixels set to black
+           }
+       }
+   }
+   return matrix2Image(hyst, 0, 0);
+   
+//     for (int i = 1; i < img.height-1; i++) {
+//         for (int j = 1; j < img.width-1; j++) {
+//             if (hyst.map[i][j] == 100) {
+//                 if ((hyst.map[i+1][j-1] == 255) || (hyst.map[i+1][j] == 255) ||
+//                     (hyst.map[i+1][j+1] == 255) || (hyst.map[i][j-1] == 255) ||
+//                     (hyst.map[i][j+1] == 255) || (hyst.map[i-1][j-1] == 255) ||
+//                     (hyst.map[i-1][j] == 255) || (hyst.map[i-1][j+1] == 255)) {
+//                     hyst.map[i][j] = 255;
+//                 } else {
+//                     hyst.map[i][j] = 0;
+//                 }
+//             }
+//         }
+//     }
+//    
+//    return matrix2Image(hyst, 0, 0);
     
     /*
      something wrong with component labeling
