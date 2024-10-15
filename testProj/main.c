@@ -3,7 +3,7 @@
 //  CS136
 //
 //  Created by nha2 on 8/27/24.
-//  Edited by Nina Wang on 9/29/24
+//  Edited by Nina Wang on 10/14/24
 // Test and demo program for netpbm. Reads a sample image and creates several output images.
 
 #include <stdio.h>
@@ -15,35 +15,51 @@
 #include "main.h"
 
 int main(int argc, const char * argv[]) {
-    // creating images
-    Image car_bw = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_bw.pgm");
-    Image car = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car.ppm");
-
-    // testing sobel filter
-    printf("starting sobel filter\n");
-    Image sobelImg = sobel(car_bw);
-    writeImage(sobelImg, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_sobel.pgm");
-    printf("finished sobel filter\n");
+    printf("edge detection car bw\n");
+    edgeDetection("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_bw.pgm",
+                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/carbw_sobel.pgm",
+                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/carbw_canny.pgm");
     
-    // testing canny filter
-    printf("test gaussian\n");
-//    Matrix carG = image2Matrix(car_bw);
-//    carG = gaussian(carG, 5, 5.0);
-//    Image carGImg = matrix2Image(carG, 0, 0);
-//    writeImage(carGImg, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_g_horiz.pgm");
-    printf("starting canny filter\n");
-    Image car_nonmax = canny(car_bw);
-    writeImage(car_nonmax, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_nonmax.pgm");
-    
- 
-    deleteImage(car_bw);
-    deleteImage(car);
+    printf("edge detection car\n");
+    edgeDetection("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car.ppm",
+                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_sobel.pgm",
+                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_canny.pgm");
 
     printf("Program ends ... ");
     return 0;
 }
 
+void edgeDetection(char *inputFileName, char *sobelFileName, char *cannyFileName) {
+    Image img = readImage(inputFileName);
+    Image sob = sobel(img);
+    Image can = canny(img);
+    deleteImage(img);
+    writeImage(sob, sobelFileName);
+    writeImage(can, cannyFileName);
+}
 
+Matrix scale(Matrix m, int scale) {
+    // scale magnitude to use full range of 0 to 255
+    float min = __FLT_MAX__;
+    float max = __FLT_MIN__;
+    for (int i = 0; i < m.height; i++) {
+        for (int j = 0; j < m.width; j++) {
+            if (m.map[i][j] < min) {
+                min = m.map[i][j];
+            } else if (m.map[i][j] > max) {
+                max = m.map[i][j];
+            }
+        }
+    }
+    
+    for (int i = 0; i < m.height; i++) {
+        for (int j = 0; j < m.width; j++) {
+            float val = m.map[i][j];
+            m.map[i][j] = (val-min) / (max-min) * scale;
+        }
+    }
+    return m;
+}
 
 //-------------------------------function_imageBlackWhite-------------------------------------------------
 /* function that receives an Image structure and an intensity threshold
@@ -432,6 +448,7 @@ Image sobel(Image img) {
         }
     }
     
+    gMag = scale(gMag, 255);
     img = matrix2Image(gMag, 0, 0);
     
     deleteMatrix(msi);
@@ -458,15 +475,11 @@ double maxDouble(double n1, double n2, double n3) {
     }
 }
 
-// applies canny filter using convolve
-// smooth image: apply gaussian with standard deviation
-// compute gradient with smoothed array
+// applies canny filter using gaussian and convolve
 Image canny(Image img) {
     Matrix imgMat = image2Matrix(img);
     imgMat = gaussian(imgMat, 3, 1.0);
-//    Matrix filt = createMatrix(3, 3);
-//    imgMat = median_filter(imgMat, filt);
-    
+
     // find x and y gradients
     double vDer[] = {0.5, 0.5, -0.5, -0.5};
     double hDer[] = {0.5, -0.5, 0.5, -0.5};
@@ -483,8 +496,14 @@ Image canny(Image img) {
     for (int i = 0; i < img.height; i++) {
         for (int j = 0; j < img.width; j++) {
             mag.map[i][j] = sqrt(pow(gradX.map[i][j],2) + pow(gradY.map[i][j],2));  // magnitude
-            
-            // orientation
+        }
+    }
+    
+    // scale magnitude to use full range of 0 to 255
+    mag = scale(mag, 255);
+    
+    for (int i = 0; i < mag.height; i++) {
+        for (int j = 0; j < mag.width; j++) {
             double deg = atan2(gradY.map[i][j], gradX.map[i][j]) * (180.0 / M_PI); // convert radians to degrees
             if (deg < 0) {
                 deg += 180; // normalize to [0, 360)
@@ -522,33 +541,14 @@ Image canny(Image img) {
             }
         }
     }
-    
-    // scale magnitude to use full range of 0 to 255
-    float min = __FLT_MAX__;
-    float max = __FLT_MIN__;
-    for (int i = 0; i < mag.height; i++) {
-        for (int j = 0; j < mag.width; j++) {
-            if (mag.map[i][j] < min) {
-                min = mag.map[i][j];
-            } else if (mag.map[i][j] > max) {
-                max = mag.map[i][j];
-            }
-        }
-    }
-    
-    for (int i = 0; i < mag.height; i++) {
-        for (int j = 0; j < mag.width; j++) {
-            float val = mag.map[i][j];
-            mag.map[i][j] = (val-min) / (max-min) * 255;
-        }
-    }
-    
+    nonMaxima = scale(nonMaxima, 255);
+
+    // hysteresis thresholding
     Matrix hyst = createMatrix(img.height, img.width);
     Matrix hystCandidates = createMatrix(img.height, img.width);
-    double threshLow = 25;
-    double threshHigh = 40;
+    double threshLow = 55;
+    double threshHigh = 60;
     
-    // hysteresis thresholding
     for (int i = 1; i < img.height-1; i++) {
         for (int j = 1; j < img.width-1; j++) {
             if (nonMaxima.map[i][j] > threshHigh) {
@@ -563,44 +563,22 @@ Image canny(Image img) {
             }
         }
     }
-    
-    for (int i = 0; i < img.height; i++) {
-        hystCandidates.map[i][0] = 255;
-        hystCandidates.map[i][img.width - 1] = 255;
-    }
-    for (int j = 0; j < img.width; j++) {
-        hystCandidates.map[0][j] = 255;
-        hystCandidates.map[img.height - 1][j] = 255;
-    }
-    
-    Matrix components = componentLabeling(hystCandidates, 1);
-    printf("found components\n");
-    
-    int acceptedComps[img.width * img.height];
-    memset(acceptedComps, 0, sizeof(acceptedComps));
-    
-    for (int i = 0; i < img.height; i++) {
-        for (int j = 0; j < img.width; j++) {
-            if (hyst.map[i][j] == 255) {
-                acceptedComps[(int)components.map[i][j]] = 1;
-            }
-        }
-    }
-   
-     for (int i = 1; i < img.height-1; i++) {
-         for (int j = 1; j < img.width-1; j++) {
-             if (hyst.map[i][j] == 100) {
-                 if ((hyst.map[i+1][j-1] == 255) || (hyst.map[i+1][j] == 255) ||
-                     (hyst.map[i+1][j+1] == 255) || (hyst.map[i][j-1] == 255) ||
-                     (hyst.map[i][j+1] == 255) || (hyst.map[i-1][j-1] == 255) ||
-                     (hyst.map[i-1][j] == 255) || (hyst.map[i-1][j+1] == 255)) {
-                     hyst.map[i][j] = 255;
-                 } else {
-                     hyst.map[i][j] = 0;
-                 }
+
+    // alternative to component labeling
+    for (int i = 1; i < img.height-1; i++) {
+     for (int j = 1; j < img.width-1; j++) {
+         if (hyst.map[i][j] == 100) {
+             if ((hyst.map[i+1][j-1] == 255) || (hyst.map[i+1][j] == 255) ||
+                 (hyst.map[i+1][j+1] == 255) || (hyst.map[i][j-1] == 255) ||
+                 (hyst.map[i][j+1] == 255) || (hyst.map[i-1][j-1] == 255) ||
+                 (hyst.map[i-1][j] == 255) || (hyst.map[i-1][j+1] == 255)) {
+                 hyst.map[i][j] = 255;
+             } else {
+                 hyst.map[i][j] = 0;
              }
          }
      }
+    }
     
     return matrix2Image(hyst, 0, 0);
 }

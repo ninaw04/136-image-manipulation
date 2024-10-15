@@ -7,16 +7,32 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "499FE32A-3320-4940-8D02-AC0A55DEDD04"
-            shouldBeEnabled = "Yes"
+            uuid = "E218D941-B781-4ABD-BFE7-17EE5E10DBD6"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "testProj/main.c"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "305"
-            endingLineNumber = "305"
-            landmarkName = "smoothing_filter(m1, m2)"
+            startingLineNumber = "392"
+            endingLineNumber = "392"
+            landmarkName = "gaussian(img, filterSize, sigma)"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "0F2C90ED-7F19-4B7B-8643-F3932F5528F8"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "testProj/main.c"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "554"
+            endingLineNumber = "554"
+            landmarkName = "canny(img)"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
