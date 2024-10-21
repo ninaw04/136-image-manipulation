@@ -463,7 +463,7 @@ void rectangle(Image img, int v1, int h1, int v2, int h2, int width, int dash, i
 	line(img, v2, h1, v1, h1, width, dash, gap, r, g, b, i);
 }
 
-// Draw ellipse in image img centered at (vCenter, hCenter) and radii (vRadius, hRadius) with a given width, dash pattern, and color. 
+// Draw ellipse in image img centered at (vCenter, hCenter) and radii (vRadius, hRadius) wstith a given width, dash pattern, and color. 
 // Width 0 indicates single-pixel width. The inputs dash and gap determine the length in pixels of the dashes 
 // and the gaps between them, resp. Use 0 for either input to draw a solid line.
 // For setting the r, g, b, and i color values, see setPixel function.

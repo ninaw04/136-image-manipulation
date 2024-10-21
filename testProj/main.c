@@ -10,23 +10,95 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "netpbm.h"
-#include <stdio.h>
+
 #include "main.h"
 
+#define MAX_RADIUS 200
+
+
 int main(int argc, const char * argv[]) {
-    printf("edge detection car bw\n");
-    edgeDetection("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_bw.pgm",
-                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/carbw_sobel.pgm",
-                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/carbw_canny.pgm");
     
-    printf("edge detection car\n");
-    edgeDetection("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car.ppm",
-                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_sobel.pgm",
-                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_canny.pgm");
+    Image circles = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/circleTest.ppm");
+    Image circleOutput = performHoughTransform(circles);
+    writeImage(circleOutput, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/hough_circles.ppm");
+    
+//    edgeDetection("/Users/ninawang/Documents/School/CS136/testProj/netpbm/circleTest.ppm", "/Users/ninawang/Documents/School/CS136/testProj/netpbm/sobel_circles.ppm", "/Users/ninawang/Documents/School/CS136/testProj/netpbm/hough_circles.ppm");
+    
+//    printf("edge detection car bw\n");
+//    edgeDetection("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_bw.pgm",
+//                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/carbw_sobel.pgm",
+//                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/carbw_canny.pgm");
+//    
+//    printf("edge detection car\n");
+//    edgeDetection("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car.ppm",
+//                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_sobel.pgm",
+//                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_canny.pgm");
 
     printf("Program ends ... ");
     return 0;
+}
+
+Image performHoughTransform(Image image) {
+    // perform canny edge detection
+    Image can = canny(image);
+
+    int maxRadius = MAX_RADIUS;
+    int threshold = 10;
+    
+    // ACCUMULATOR SPACE
+    int ***accumulator = (int ***)malloc(image.height * sizeof(int **));
+    for (int i = 0; i < image.height; i++) {
+        accumulator[i] = (int **)malloc(image.width * sizeof(int *));
+        for (int j = 0; j < image.width; j++) {
+            accumulator[i][j] = (int *)calloc(maxRadius, sizeof(int));
+        }
+    }
+    
+    // MAXIMA, detected center and radius of circle
+    int ***maxima = (int ***)malloc(image.height * sizeof(int **));
+    for (int i = 0; i < image.height; i++) {
+        maxima[i] = (int **)malloc(image.width * sizeof(int *));
+        for (int j = 0; j < image.width; j++) {
+            maxima[i][j] = (int *)calloc(maxRadius, sizeof(int));
+        }
+    }
+    
+    printf("hough transform lines\n");
+    
+    houghTransformLines(image, accumulator, maxRadius);
+    // smooth accumulator space here if possible?
+    
+    printf("hough find maxima\n");
+    findHoughMaxima(accumulator, maxima, maxRadius, image.height, image.width, threshold);
+    
+    
+    // draw circles on original image
+    for (int y = 0; y < image.height; y++) {
+        for (int x = 0; x < image.width; x++) {
+            for (int r = 1; r < maxRadius; r++) {
+                if (maxima[y][x][r] == 1) {
+                    printf("drawing circle something\n");
+                    ellipse(image, y, x, r, r, 0, 0, 0, 255, 0, 0, 255);
+                }
+            }
+        }
+    }
+    
+    for (int i = 0; i < image.height; i++) {
+        for (int j = 0; j < image.width; j++) {
+            free(accumulator[i][j]);
+            free(maxima[i][j]);
+        }
+        free(accumulator[i]);
+        free(maxima[i]);
+    }
+    free(accumulator);
+    free(maxima);
+    
+    deleteImage(can);
+    
+    printf("yippeee");
+    return image;
 }
 
 void edgeDetection(char *inputFileName, char *sobelFileName, char *cannyFileName) {

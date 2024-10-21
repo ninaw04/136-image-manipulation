@@ -8,6 +8,10 @@
 #ifndef main_h
 #define main_h
 
+#include "hough.h"
+
+Image performHoughTransform(Image image);
+
 Matrix scale(Matrix m, int scale);
 Image imageBlackWhite(Image originalImg, double threshold);
 Image imageExpand(Image originalImg);
@@ -24,6 +28,5 @@ Matrix gaussian(Matrix img, int size, double sigma);
 void edgeDetection(char *inputFileName, char *sobelFileName, char *cannyFileName);
 Image sobel(Image image);
 Image canny(Image image);
-
 
 #endif /* main_h */
