@@ -13,14 +13,14 @@
 
 #include "main.h"
 
-#define MAX_RADIUS 200
+#define MAX_RADIUS 150
 
 
 int main(int argc, const char * argv[]) {
     
-    Image circles = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/circleTest.ppm");
+    Image circles = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/circles.ppm");
     Image circleOutput = performHoughTransform(circles);
-    writeImage(circleOutput, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/hough_circles.ppm");
+    writeImage(circleOutput, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/hough_circles2.ppm");
     
 //    edgeDetection("/Users/ninawang/Documents/School/CS136/testProj/netpbm/circleTest.ppm", "/Users/ninawang/Documents/School/CS136/testProj/netpbm/sobel_circles.ppm", "/Users/ninawang/Documents/School/CS136/testProj/netpbm/hough_circles.ppm");
     
@@ -40,12 +40,13 @@ int main(int argc, const char * argv[]) {
 
 Image performHoughTransform(Image image) {
     // perform canny edge detection
-    Image can = canny(image);
+    Image can = canny(image, 2);
 
     int maxRadius = MAX_RADIUS;
-    int threshold = 10;
+    int threshold = 60;
     
     // ACCUMULATOR SPACE
+    // vertical, horizontal, radius
     int ***accumulator = (int ***)malloc(image.height * sizeof(int **));
     for (int i = 0; i < image.height; i++) {
         accumulator[i] = (int **)malloc(image.width * sizeof(int *));
@@ -62,28 +63,26 @@ Image performHoughTransform(Image image) {
             maxima[i][j] = (int *)calloc(maxRadius, sizeof(int));
         }
     }
-    
+
     printf("hough transform lines\n");
-    
-    houghTransformLines(image, accumulator, maxRadius);
-    // smooth accumulator space here if possible?
+    houghTransformLines(can, accumulator, maxRadius);
     
     printf("hough find maxima\n");
     findHoughMaxima(accumulator, maxima, maxRadius, image.height, image.width, threshold);
-    
-    
-    // draw circles on original image
+
+//     draw circles on original image
     for (int y = 0; y < image.height; y++) {
         for (int x = 0; x < image.width; x++) {
             for (int r = 1; r < maxRadius; r++) {
                 if (maxima[y][x][r] == 1) {
-                    printf("drawing circle something\n");
                     ellipse(image, y, x, r, r, 0, 0, 0, 255, 0, 0, 255);
+                    break;
                 }
             }
         }
     }
     
+    // Free accumulator and maxima memory
     for (int i = 0; i < image.height; i++) {
         for (int j = 0; j < image.width; j++) {
             free(accumulator[i][j]);
@@ -104,7 +103,7 @@ Image performHoughTransform(Image image) {
 void edgeDetection(char *inputFileName, char *sobelFileName, char *cannyFileName) {
     Image img = readImage(inputFileName);
     Image sob = sobel(img);
-    Image can = canny(img);
+    Image can = canny(img, 3);
     deleteImage(img);
     writeImage(sob, sobelFileName);
     writeImage(can, cannyFileName);
@@ -548,9 +547,9 @@ double maxDouble(double n1, double n2, double n3) {
 }
 
 // applies canny filter using gaussian and convolve
-Image canny(Image img) {
+Image canny(Image img, int gauss) {
     Matrix imgMat = image2Matrix(img);
-    imgMat = gaussian(imgMat, 3, 1.0);
+    imgMat = gaussian(imgMat, gauss, 1.0);
 
     // find x and y gradients
     double vDer[] = {0.5, 0.5, -0.5, -0.5};

@@ -27,6 +27,6 @@ Matrix gaussian(Matrix img, int size, double sigma);
 
 void edgeDetection(char *inputFileName, char *sobelFileName, char *cannyFileName);
 Image sobel(Image image);
-Image canny(Image image);
+Image canny(Image image, int gauss);
 
 #endif /* main_h */
