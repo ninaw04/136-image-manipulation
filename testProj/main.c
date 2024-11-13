@@ -18,21 +18,11 @@
 
 int main(int argc, const char * argv[]) {
     
-    Image circles = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/circles.ppm");
-    Image circleOutput = performHoughTransform(circles);
-    writeImage(circleOutput, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/hough_circles2.ppm");
-    
-//    edgeDetection("/Users/ninawang/Documents/School/CS136/testProj/netpbm/circleTest.ppm", "/Users/ninawang/Documents/School/CS136/testProj/netpbm/sobel_circles.ppm", "/Users/ninawang/Documents/School/CS136/testProj/netpbm/hough_circles.ppm");
-    
-//    printf("edge detection car bw\n");
-//    edgeDetection("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_bw.pgm",
-//                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/carbw_sobel.pgm",
-//                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/carbw_canny.pgm");
-//    
-//    printf("edge detection car\n");
-//    edgeDetection("/Users/ninawang/Documents/School/CS136/testProj/netpbm/car.ppm",
-//                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_sobel.pgm",
-//                  "/Users/ninawang/Documents/School/CS136/testProj/netpbm/car_canny.pgm");
+    Image first = readImage("/Users/ninawang/Documents/School/CS136/testProj/netpbm/textures/1.pgm");
+    Image firstMat = segmentTexture(first, 1);
+    writeImage(firstMat, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/test.ppm");
+//    Image circleOutput = performHoughTransform(circles);
+//    writeImage(circleOutput, "/Users/ninawang/Documents/School/CS136/testProj/netpbm/hough_circles2.ppm");
 
     printf("Program ends ... ");
     return 0;

@@ -9,8 +9,10 @@
 #define main_h
 
 #include "hough.h"
+#include "segmentTexture.h"
 
 Image performHoughTransform(Image image);
+Matrix convolve(Matrix m1, Matrix m2);
 
 Matrix scale(Matrix m, int scale);
 Image imageBlackWhite(Image originalImg, double threshold);
