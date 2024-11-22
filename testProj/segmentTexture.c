@@ -7,6 +7,10 @@
 
 #include "segmentTexture.h"
 
+#define NUM_LAWS_FILTERS 25
+#define REDUCED_LAWS 15
+#define NEIGHBORHOOD_SIZE 15
+
 Matrix matrixMultSpecial(Matrix m1, Matrix m2) {
     // changes m1 to be column vector
     Matrix m1Col = createMatrix(m1.width, 1); // height of m1 width and width of 1
@@ -39,6 +43,8 @@ Matrix matrixMultSpecial(Matrix m1, Matrix m2) {
 }
 
 Image segmentTexture(Image inputImg, int segments) {
+    // edge detection first?
+    
     // law's 5 filters
     double l[] = {1, 4, 6, 4, 1};       // center weighted local average
     double e[] = {-1, -2, 0, 2, 1};     // responds to row or col step edges
@@ -83,63 +89,142 @@ Image segmentTexture(Image inputImg, int segments) {
     Matrix r5w5 = matrixMultSpecial(r5, w5);
     Matrix r5r5 = matrixMultSpecial(r5, r5);
     
-    // PRINTING OUT l5s5
-//    printf("printing l5s5 matrix\n");
-//    for (int i = 0; i < l5s5.height; i++) {
-//        for (int j = 0; j < l5s5.width; j++) {
-//            printf("%d ", (int)l5s5.map[i][j]);
-//        }
-//        printf("\n");
-//    }
-    
     // derive local feature vectors
     Matrix inputMatrix = image2Matrix(inputImg);
     
     Matrix mat1 = convolve(inputMatrix, l5l5);
-    Matrix mat2 = convolve(inputMatrix, l5e5);
-    Matrix mat3 = convolve(inputMatrix, l5s5);
-    Matrix mat4 = convolve(inputMatrix, l5w5);
-    Matrix mat5 = convolve(inputMatrix, l5r5);
+    Matrix mat2 = convolve(inputMatrix, l5e5); //
+    Matrix mat3 = convolve(inputMatrix, l5s5); //
+    Matrix mat4 = convolve(inputMatrix, l5w5); ///
+    Matrix mat5 = convolve(inputMatrix, l5r5); //
     
-    Matrix mat6 = convolve(inputMatrix, e5l5);
+    Matrix mat6 = convolve(inputMatrix, e5l5); //
     Matrix mat7 = convolve(inputMatrix, e5e5);
-    Matrix mat8 = convolve(inputMatrix, e5s5);
-    Matrix mat9 = convolve(inputMatrix, e5w5);
-    Matrix mat10 = convolve(inputMatrix, e5r5);
+    Matrix mat8 = convolve(inputMatrix, e5s5); //
+    Matrix mat9 = convolve(inputMatrix, e5w5); ///
+    Matrix mat10 = convolve(inputMatrix, e5r5); ///
     
-    Matrix mat11 = convolve(inputMatrix, s5l5);
-    Matrix mat12 = convolve(inputMatrix, s5e5);
+    Matrix mat11 = convolve(inputMatrix, s5l5); //
+    Matrix mat12 = convolve(inputMatrix, s5e5); //
     Matrix mat13 = convolve(inputMatrix, s5s5);
-    Matrix mat14 = convolve(inputMatrix, s5w5);
-    Matrix mat15 = convolve(inputMatrix, s5r5);
+    Matrix mat14 = convolve(inputMatrix, s5w5); ///
+    Matrix mat15 = convolve(inputMatrix, s5r5); //
     
-    Matrix mat16 = convolve(inputMatrix, w5l5);
-    Matrix mat17 = convolve(inputMatrix, w5e5);
-    Matrix mat18 = convolve(inputMatrix, w5s5);
+    Matrix mat16 = convolve(inputMatrix, w5l5); ///
+    Matrix mat17 = convolve(inputMatrix, w5e5); ///
+    Matrix mat18 = convolve(inputMatrix, w5s5); ///
     Matrix mat19 = convolve(inputMatrix, w5w5);
-    Matrix mat20 = convolve(inputMatrix, w5r5);
+    Matrix mat20 = convolve(inputMatrix, w5r5); ///
     
-    Matrix mat21 = convolve(inputMatrix, r5l5);
-    Matrix mat22 = convolve(inputMatrix, r5e5);
-    Matrix mat23 = convolve(inputMatrix, r5s5);
-    Matrix mat24 = convolve(inputMatrix, r5w5);
+    Matrix mat21 = convolve(inputMatrix, r5l5); //
+    Matrix mat22 = convolve(inputMatrix, r5e5); ///
+    Matrix mat23 = convolve(inputMatrix, r5s5); //
+    Matrix mat24 = convolve(inputMatrix, r5w5); ///
     Matrix mat25 = convolve(inputMatrix, r5r5);
 
     // storing all matrices
-    Matrix matrices[] = {mat1, mat2, mat3, mat4, mat5, mat6, mat7, mat8, mat9, mat10,
+    Matrix energies[] = {mat1, mat2, mat3, mat4, mat5, mat6, mat7, mat8, mat9, mat10,
                         mat11, mat12, mat13, mat14, mat15, mat16, mat17, mat18, mat19,
                         mat20, mat21, mat22, mat23, mat24, mat25};
-    
+
     // delete all filter matrices
-    
-    printf("laws texture energy measures for fifth pixel??\n");
-    for (int i = 0; i < 25; i++) {
-        if(i % 5  == 0) {
-            printf("\n");
+//    deleteMatrix(mat1);    deleteMatrix(mat2);    deleteMatrix(mat3);    deleteMatrix(mat4);    deleteMatrix(mat5);
+//    deleteMatrix(mat6);    deleteMatrix(mat7);    deleteMatrix(mat8);    deleteMatrix(mat9);    deleteMatrix(mat10);
+//    deleteMatrix(mat11);    deleteMatrix(mat12);    deleteMatrix(mat13);    deleteMatrix(mat14);    deleteMatrix(mat15);
+//    deleteMatrix(mat16);    deleteMatrix(mat17);    deleteMatrix(mat18);    deleteMatrix(mat19);    deleteMatrix(mat20);
+//    deleteMatrix(mat21);    deleteMatrix(mat22);    deleteMatrix(mat23);    deleteMatrix(mat24);    deleteMatrix(mat25);
+
+    for (int i = 0; i < NUM_LAWS_FILTERS; i++) {
+        // absolute value
+        for (int y = 0; y < energies[i].height; y++) {
+            for (int x = 0; x < energies[i].width; x++) {
+                energies[i].map[y][x] = fabs(energies[i].map[y][x]);
+            }
         }
-        printf("%d ", (int)matrices[i].map[5][5]);
+        
+        // NORMALIZE ALL MATRICES
+        energies[i] = scale(energies[i], 255);
+        
+        Matrix energyMap = createMatrix(energies[i].height, energies[i].width);
+        
+//         summing neighborhood of each pixel
+        for (int y = 0; y < energies[i].height; y++) {
+            for (int x = 0; x < energies[i].width; x++) {
+                float sum = 0.0;
+                
+                // Sum the neighborhood centered at (y,x)
+                for (int dy = -NEIGHBORHOOD_SIZE/2; dy <= NEIGHBORHOOD_SIZE/2; dy++) {
+                    for (int dx = -NEIGHBORHOOD_SIZE/2; dx <= NEIGHBORHOOD_SIZE/2; dx++) {
+                        int ny = y + dy;
+                        int nx = x + dx;
+                        
+                        // Check boundaries
+                        if (ny >= 0 && ny < energies[i].height &&
+                            nx >= 0 && nx < energies[i].width) {
+                            sum += energies[i].map[ny][nx];
+                        }
+                    }
+                }
+                
+                energyMap.map[y][x] = sum;
+            }
+        }
+        
+        energies[i] = energyMap;
+        printf("energy map of %d\n", i);
+        
+        // FOR VISUALIZATION PURPOSES ONLY
+//        energies[i] = scale(energies[i], 255);
     }
-    printf("\n");
     
-    return matrix2Image(mat10, 0, 0);
+    // Combining complementary pairs, reducing filters from 25 to 15
+    
+    printf("combining complementary pairs");
+    Matrix matLE = averageTwoMatrices(energies[1], energies[5]); // mat2 and mat6
+    Matrix matLS = averageTwoMatrices(energies[2], energies[10]); // mat3 and mat11
+    Matrix matLR = averageTwoMatrices(energies[4], energies[20]); // mat5 and mat21
+    Matrix matES = averageTwoMatrices(energies[7], energies[11]); // mat8 and mat12
+    Matrix matSR = averageTwoMatrices(energies[14], energies[22]); // mat15 and mat23
+    Matrix matLW = averageTwoMatrices(energies[3], energies[15]); // mat4 and mat16
+    Matrix matEW = averageTwoMatrices(energies[8], energies[16]); // mat9 and mat17
+    Matrix matER = averageTwoMatrices(energies[9], energies[21]); // mat10 and mat22
+    Matrix matSW = averageTwoMatrices(energies[13], energies[17]); // mat14 and mat18
+    Matrix matRW = averageTwoMatrices(energies[19], energies[23]); // mat20 and mat24
+    
+    // I guess this is the 15D feature space vector?
+    // Matrix of feature vectors, found per pixel [y][x]
+    Matrix featureVectors[] = {energies[0], energies[6], energies[12], energies[18], energies[24],
+        matLE, matLS, matLR, matES, matSR, matLW, matEW, matER, matSW, matRW};
+    
+    // remove biases with z score normalization
+    struct zNorm {
+        double mean;
+        double standardDev;
+    };
+    
+    for (int i = 0; i < REDUCED_LAWS; i++) {
+        double sum = 0;
+        for (int y = 0; y < inputMatrix.height; y++) {
+            for (int x = 0; x < inputMatrix.width; x++) {
+                sum += featureVectors[i].map[y][x];
+            }
+        }
+//    mean = sum / (inputMatrix.height * inputMatrix.width);
+    }
+    
+    // calculate degree of similarity with euclidian distance
+    for (int i = 0; i < REDUCED_LAWS; i++) {
+        
+    }
+    
+    // use deg of sim to  k  means
+    // zero mean and unit variance
+    
+    //
+    
+    // can clean up images with expand shrink????
+    
+    
+    
+    return matrix2Image(matRW, 0, 0);
 }

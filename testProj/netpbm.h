@@ -2,6 +2,9 @@
 // Functions for reading and writing binary PBM, PGM, and PPM image files.
 // V2.2 by Marc Pomplun on 10/19/2013
 
+#ifndef NETPBM_H
+#define NETPBM_H
+
 #define SQR(x) ((x)*(x))
 #define PI 3.14159265358979323846
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
@@ -108,3 +111,4 @@ void rectangle(Image img, int v1, int h1, int v2, int h2, int width, int dash, i
 void ellipse(Image img, int vCenter, int hCenter, int vRadius, int hRadius, int width, int dash, int gap, int r, int g, int b, int i);
 
 
+#endif

@@ -3,12 +3,15 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		2A0F51D52C8BB59F00C6FD35 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 2A0F51D42C8BB59F00C6FD35 /* main.c */; };
+		2A7AD5D12CD5ECA3006B0D09 /* segmentTexture.c in Sources */ = {isa = PBXBuildFile; fileRef = 2A7AD5D02CD5ECA3006B0D09 /* segmentTexture.c */; };
+		2AB059502CEBAA0E0006D30F /* imageProc.c in Sources */ = {isa = PBXBuildFile; fileRef = 2AB0594F2CEBAA0E0006D30F /* imageProc.c */; };
 		2AF30BE12C9509DD004BFD6F /* netpbm.c in Sources */ = {isa = PBXBuildFile; fileRef = 2AF30BE02C9509DD004BFD6F /* netpbm.c */; };
+		2AF34F0F2CC059E2002BB09C /* hough.c in Sources */ = {isa = PBXBuildFile; fileRef = 2AF34F0E2CC059E2002BB09C /* hough.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -29,9 +32,19 @@
 		2A0F51E02C8BE72F00C6FD35 /* text.pgm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = text.pgm; path = ../../project1/netpbm/text.pgm; sourceTree = "<group>"; };
 		2A4B03FA2CABD9E3000652E9 /* testProj.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = testProj.entitlements; sourceTree = "<group>"; };
 		2A4B03FB2CB59E33000652E9 /* main.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = main.h; sourceTree = "<group>"; };
+		2A7AD5CF2CD5ECA3006B0D09 /* segmentTexture.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = segmentTexture.h; sourceTree = "<group>"; };
+		2A7AD5D02CD5ECA3006B0D09 /* segmentTexture.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = segmentTexture.c; sourceTree = "<group>"; };
+		2AB0594E2CEBAA0E0006D30F /* imageProc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = imageProc.h; sourceTree = "<group>"; };
+		2AB0594F2CEBAA0E0006D30F /* imageProc.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = imageProc.c; sourceTree = "<group>"; };
 		2AF30BDF2C9509DD004BFD6F /* netpbm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = netpbm.h; sourceTree = "<group>"; };
 		2AF30BE02C9509DD004BFD6F /* netpbm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = netpbm.c; sourceTree = "<group>"; };
+		2AF34F0D2CC059E2002BB09C /* hough.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = hough.h; sourceTree = "<group>"; };
+		2AF34F0E2CC059E2002BB09C /* hough.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = hough.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		2A7AD5CE2CD5EC73006B0D09 /* textures */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = textures; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		2A0F51CE2C8BB59F00C6FD35 /* Frameworks */ = {
@@ -63,12 +76,19 @@
 		2A0F51D32C8BB59F00C6FD35 /* testProj */ = {
 			isa = PBXGroup;
 			children = (
+				2A7AD5CE2CD5EC73006B0D09 /* textures */,
 				2A4B03FA2CABD9E3000652E9 /* testProj.entitlements */,
 				2A0F51E02C8BE72F00C6FD35 /* text.pgm */,
 				2A0F51D42C8BB59F00C6FD35 /* main.c */,
 				2A4B03FB2CB59E33000652E9 /* main.h */,
 				2AF30BE02C9509DD004BFD6F /* netpbm.c */,
 				2AF30BDF2C9509DD004BFD6F /* netpbm.h */,
+				2AF34F0D2CC059E2002BB09C /* hough.h */,
+				2AF34F0E2CC059E2002BB09C /* hough.c */,
+				2A7AD5CF2CD5ECA3006B0D09 /* segmentTexture.h */,
+				2A7AD5D02CD5ECA3006B0D09 /* segmentTexture.c */,
+				2AB0594E2CEBAA0E0006D30F /* imageProc.h */,
+				2AB0594F2CEBAA0E0006D30F /* imageProc.c */,
 			);
 			path = testProj;
 			sourceTree = "<group>";
@@ -87,6 +107,9 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				2A7AD5CE2CD5EC73006B0D09 /* textures */,
 			);
 			name = testProj;
 			productName = testProj;
@@ -130,8 +153,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2AF34F0F2CC059E2002BB09C /* hough.c in Sources */,
+				2A7AD5D12CD5ECA3006B0D09 /* segmentTexture.c in Sources */,
 				2A0F51D52C8BB59F00C6FD35 /* main.c in Sources */,
 				2AF30BE12C9509DD004BFD6F /* netpbm.c in Sources */,
+				2AB059502CEBAA0E0006D30F /* imageProc.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

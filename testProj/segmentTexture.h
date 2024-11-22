@@ -9,8 +9,9 @@
 #define segmentTexture_h
 
 #include <stdio.h>
-//#include "netpbm.h"
-#include "main.h"
+#include "netpbm.h"
+#include "imageProc.h"
+//#include "main.h"
 
 Image segmentTexture(Image inputImg, int segments);
 
