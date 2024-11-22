@@ -6,6 +6,7 @@
 //
 
 #include "segmentTexture.h"
+#include <math.h>
 
 #define NUM_LAWS_FILTERS 25
 #define REDUCED_LAWS 15
@@ -202,6 +203,10 @@ Image segmentTexture(Image inputImg, int segments) {
         double standardDev;
     };
     
+    // variable to store zNorms of all 15 feature vecs
+    struct zNorm featureNorms[REDUCED_LAWS];
+    
+    // populate mean
     for (int i = 0; i < REDUCED_LAWS; i++) {
         double sum = 0;
         for (int y = 0; y < inputMatrix.height; y++) {
@@ -209,7 +214,27 @@ Image segmentTexture(Image inputImg, int segments) {
                 sum += featureVectors[i].map[y][x];
             }
         }
-//    mean = sum / (inputMatrix.height * inputMatrix.width);
+        featureNorms[i].mean = sum / (inputMatrix.height * inputMatrix.width);
+    }
+    
+    // populate standard deviation
+    for (int i = 0; i < REDUCED_LAWS; i++) {
+        double sum_sq_diff = 0;
+        for (int y = 0; y < inputMatrix.height; y++) {
+            for (int x = 0; x < inputMatrix.width; x++) {
+                sum_sq_diff += pow(featureVectors[i].map[y][x] - featureNorms[i].mean, 2);
+            }
+        }
+        featureNorms[i].standardDev = sqrt(sum_sq_diff / (inputMatrix.height * inputMatrix.width));
+    }
+    
+    // calculate z norms and update feature vector values
+    for (int i = 0; i < REDUCED_LAWS; i++) {
+        for (int y = 0; y < inputMatrix.height; y++) {
+            for (int x = 0; x < inputMatrix.width; x++) {
+                featureVectors[i].map[y][x] = (featureVectors[i].map[y][x] - featureNorms[i].mean) / featureNorms[i].standardDev;
+            }
+        }
     }
     
     // calculate degree of similarity with euclidian distance
