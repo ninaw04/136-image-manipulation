@@ -14,5 +14,6 @@
 //#include "main.h"
 
 Image segmentTexture(Image inputImg, int segments);
+Matrix kMeans(Matrix featureVectors[], Matrix clusterLabels, int segments, int maxIter);
 
 #endif /* segmentTexture_h */

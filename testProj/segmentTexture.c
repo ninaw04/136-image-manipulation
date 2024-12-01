@@ -8,9 +8,13 @@
 #include "segmentTexture.h"
 #include <math.h>
 
+// Add at start of program
+#include <time.h>
+
 #define NUM_LAWS_FILTERS 25
 #define REDUCED_LAWS 15
 #define NEIGHBORHOOD_SIZE 15
+#define CONVERGENCE_THRESHOLD 1e-6     // if normalized 1e-3
 
 Matrix matrixMultSpecial(Matrix m1, Matrix m2) {
     // changes m1 to be column vector
@@ -135,6 +139,8 @@ Image segmentTexture(Image inputImg, int segments) {
 //    deleteMatrix(mat16);    deleteMatrix(mat17);    deleteMatrix(mat18);    deleteMatrix(mat19);    deleteMatrix(mat20);
 //    deleteMatrix(mat21);    deleteMatrix(mat22);    deleteMatrix(mat23);    deleteMatrix(mat24);    deleteMatrix(mat25);
 
+    
+    // Absolute value windowing function to prevent artifacts
     for (int i = 0; i < NUM_LAWS_FILTERS; i++) {
         // absolute value
         for (int y = 0; y < energies[i].height; y++) {
@@ -143,8 +149,9 @@ Image segmentTexture(Image inputImg, int segments) {
             }
         }
         
-        // NORMALIZE ALL MATRICES
-        energies[i] = scale(energies[i], 255);
+        // not sure if I need this
+//        // NORMALIZE ALL MATRICES
+//        energies[i] = scale(energies[i], 255);
         
         Matrix energyMap = createMatrix(energies[i].height, energies[i].width);
         
@@ -173,14 +180,11 @@ Image segmentTexture(Image inputImg, int segments) {
         
         energies[i] = energyMap;
         printf("energy map of %d\n", i);
-        
-        // FOR VISUALIZATION PURPOSES ONLY
-//        energies[i] = scale(energies[i], 255);
     }
     
     // Combining complementary pairs, reducing filters from 25 to 15
     
-    printf("combining complementary pairs");
+    printf("combining complementary pairs\n");
     Matrix matLE = averageTwoMatrices(energies[1], energies[5]); // mat2 and mat6
     Matrix matLS = averageTwoMatrices(energies[2], energies[10]); // mat3 and mat11
     Matrix matLR = averageTwoMatrices(energies[4], energies[20]); // mat5 and mat21
@@ -197,7 +201,10 @@ Image segmentTexture(Image inputImg, int segments) {
     Matrix featureVectors[] = {energies[0], energies[6], energies[12], energies[18], energies[24],
         matLE, matLS, matLR, matES, matSR, matLW, matEW, matER, matSW, matRW};
     
+    // does the order matter? should I normalize beforer combining complementary pairs?
     // remove biases with z score normalization
+    printf("removing biases with z score normalization\n");
+    
     struct zNorm {
         double mean;
         double standardDev;
@@ -237,19 +244,225 @@ Image segmentTexture(Image inputImg, int segments) {
         }
     }
     
-    // calculate degree of similarity with euclidian distance
-    for (int i = 0; i < REDUCED_LAWS; i++) {
-        
+    // K MEANS
+//    for (int i = 0; i < REDUCED_LAWS; i++) {
+//        scale(featureVectors[i], 255);
+//    }
+    
+    printf("\nstarting k means clustering\n");
+    int maxIter = 20;
+    Matrix clusterLabels = createMatrix(inputMatrix.height, inputMatrix.width);
+    clusterLabels = kMeans(featureVectors, clusterLabels, segments, maxIter);
+    printf("finsihed k means clustering\n");
+    
+    // Color image based on cluster labeling
+    printf("coloring image\n");
+    
+    srand(time(NULL));
+    
+    // Create arrays to store random colors for each segment
+    unsigned char* colors_r = (unsigned char*)malloc(segments * sizeof(unsigned char));
+    unsigned char* colors_g = (unsigned char*)malloc(segments * sizeof(unsigned char));
+    unsigned char* colors_b = (unsigned char*)malloc(segments * sizeof(unsigned char));
+
+    // Generate random colors once for each segment
+    for (int i = 0; i < segments; i++) {
+        colors_r[i] = rand() % 256;  // Random red (0-255)
+        colors_g[i] = rand() % 256;  // Random green (0-255)
+        colors_b[i] = rand() % 256;  // Random blue (0-255)
+    }
+
+    // Main pixel processing loops
+    for (int y = 0; y < clusterLabels.height; y++) {
+        for (int x = 0; x < clusterLabels.width; x++) {
+            int segmentIndex = (int)clusterLabels.map[y][x];
+            
+            // Check if the segment index is valid
+            if (segmentIndex >= 0 && segmentIndex < segments) {
+                setPixel(inputImg, y, x,
+                        colors_r[segmentIndex],
+                        colors_g[segmentIndex],
+                        colors_b[segmentIndex],
+                        255);
+            }
+        }
+    }
+
+    // Don't forget to free the allocated memory
+    free(colors_r);
+    free(colors_g);
+    free(colors_b);
+    
+    return inputImg;
+//    return matrix2Image(clusterLabels, 0, 0);
+    
+    // can clean up images with expand shrink
+//    featureVectors[0] = scale(featureVectors[0], 255);
+//    return matrix2Image(featureVectors[0], 0, 0);
+}
+
+Matrix kMeans(Matrix featureVectors[], Matrix clusterLabels, int segments, int maxIter) {
+    // initialize centroids
+    double **centroids = (double **)malloc(segments * sizeof(double *));
+    for(int i = 0; i < segments; i++) {
+        centroids[i] = (double *)calloc(REDUCED_LAWS, sizeof(double));
     }
     
-    // use deg of sim to  k  means
-    // zero mean and unit variance
+    printf("initializing centroids\n");
+    // randomize centroids
+    srand(time(NULL));
+
+    // Initialize centroids with random existing points
+    for(int i = 0; i < segments; i++) {
+        // Try to pick points that aren't too close together
+        int maxAttempts = 10;
+        int attempt = 0;
+        int validPoint = 0;
+        
+        while (!validPoint && attempt < maxAttempts) {
+            int randY = rand() % clusterLabels.height;
+            int randX = rand() % clusterLabels.width;
+            
+            // Copy feature values
+            for(int j = 0; j < REDUCED_LAWS; j++) {
+                centroids[i][j] = featureVectors[j].map[randY][randX];
+            }
+            
+            // Check if this point is far enough from previous centroids
+            validPoint = 1;
+            for(int k = 0; k < i; k++) {
+                double distance = 0;
+                for(int j = 0; j < REDUCED_LAWS; j++) {
+                    distance += pow(centroids[i][j] - centroids[k][j], 2);
+                }
+                distance = sqrt(distance);
+                
+                if(distance < 1e-6) {  // Too close to another centroid
+                    validPoint = 0;
+                    break;
+                }
+            }
+            attempt++;
+        }
+    }
     
-    //
+    for (int i = 0; i < segments; i++) {
+        printf("Centroid %d: ", i);
+        for (int j = 0; j < REDUCED_LAWS; j++) {
+            printf("%f ", centroids[i][j]);
+        }
+        printf("\n");
+    }
     
-    // can clean up images with expand shrink????
     
+    double **previousCentroids = (double **)malloc(segments * sizeof(double *));
+    for(int i = 0; i < segments; i++) {
+        previousCentroids[i] = (double *)malloc(REDUCED_LAWS * sizeof(double));
+    }
     
+    int iterations = 0;
     
-    return matrix2Image(matRW, 0, 0);
+    while (iterations < maxIter) {
+        printf("\tk means iteration: %d\n", iterations);
+        // copying centroid into previous centroid
+        for (int i = 0; i < segments; i++) {
+            for (int j = 0; j < REDUCED_LAWS; j++) {
+                previousCentroids[i][j] = centroids[i][j];
+            }
+        }
+        
+        // assignment
+        int *assigned = (int *)calloc(segments, sizeof(int));
+        
+        // iterating through all of the centroids
+        for (int y = 0; y < clusterLabels.height; y++) {
+            for (int x = 0; x < clusterLabels.width; x++) {
+                double nearest = __DBL_MAX__; // nearest for each pixel
+                int nearestCentroid = 0; // tracking centroid
+                for (int i = 0; i < segments; i++) {
+                    // degree of similarity by calculating distance of pixel to centroid
+                    double sumSq = 0;
+                    for (int j = 0; j < REDUCED_LAWS; j++) {
+                        sumSq += pow(featureVectors[j].map[y][x] - centroids[i][j], 2);
+                    }
+                    double distance = sqrt(sumSq);
+                    if (distance < nearest) {
+                        // labeling the pixel to the nearest centroid index
+//                        clusterLabels.map[y][x] = i;
+                        nearest = distance;
+                        nearestCentroid = i;
+                    }
+                }
+                clusterLabels.map[y][x] = nearestCentroid;
+            }
+        }
+        
+        for (int i = 0; i < segments; i++) {
+            for (int j = 0; j < REDUCED_LAWS; j++) {
+                centroids[i][j] = 0;
+            }
+        }
+        
+        // update step
+        for (int y = 0; y < clusterLabels.height; y++) {
+            for (int x = 0; x < clusterLabels.width; x++) {
+                int cluster = (int)clusterLabels.map[y][x];
+                assigned[cluster]++;
+                for (int j = 0; j < REDUCED_LAWS; j++) {
+                    centroids[cluster][j] += featureVectors[j].map[y][x];
+                }
+            }
+        }
+        
+        printf("\n----------------------------------\n");
+        for (int i = 0; i < segments; i++) {
+            printf("Centroid %d: ", i);
+            for (int j = 0; j < REDUCED_LAWS; j++) {
+                printf("%f ", centroids[i][j]);
+            }
+            printf("\n");
+        }
+        printf("----------------------------------\n");
+        
+        // Average step
+        for (int i = 0; i < segments; i++) {
+            if (assigned[i] > 0) {  // Prevent division by zero
+                for (int j = 0; j < REDUCED_LAWS; j++) {
+                    centroids[i][j] /= assigned[i];
+//                    printf("average %f\t", centroids[i][j]);
+                }
+//                printf("\n");
+            }
+        }
+        
+        // Add convergence check
+        double maxMovement = 0.0;
+        for (int i = 0; i < segments; i++) {
+            double movement = 0.0;
+            for (int j = 0; j < REDUCED_LAWS; j++) {
+                movement += pow(centroids[i][j] - previousCentroids[i][j], 2);
+            }
+            movement = sqrt(movement);
+            maxMovement = fmax(maxMovement, movement);
+        }
+        
+        free(assigned);
+        
+        // Check for convergence
+        if (maxMovement < CONVERGENCE_THRESHOLD) {
+            printf("convergence point: %f\n", maxMovement);
+            break;
+        }
+
+        iterations++;
+    }
+    
+    for(int i = 0; i < segments; i++) {
+        free(previousCentroids[i]);
+        free(centroids[i]);
+    }
+    free(previousCentroids);
+    free(centroids);
+    
+    return clusterLabels;
 }
